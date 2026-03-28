@@ -1,9 +1,0 @@
-{
-  "name": "@YOUR_GITHUB_USERNAME/typescript-config",
-  "version": "0.1.0",
-  "private": false,
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
-    "access": "restricted"
-  }
-}
