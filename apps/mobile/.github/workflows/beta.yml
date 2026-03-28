@@ -1,0 +1,58 @@
+name: Beta - Integration and End-to-End Tests
+on:
+  pull_request:
+    branches: [beta]
+  push:
+    branches: [beta]
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Integration tests
+        run: pnpm test:integration
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+    if: github.event_name == 'pull_request' && github.base_ref == 'beta'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: End-to-end tests
+        run: pnpm test:e2e
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          if-no-files-found: ignore
+  promote-to-staging:
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: auto-promote-staging-${{ github.sha }}
+          base: staging
+          title: "🎯 Auto-promote from beta to staging"

@@ -1,0 +1,101 @@
+.nav {
+  width: min(100%, 780px);
+  justify-self: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.trigger {
+  border: 1px solid rgba(127, 127, 127, 0.28);
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-family: var(--font-geist-sans);
+  font-size: 14px;
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  list-style: none;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.trigger:hover {
+  background: color-mix(in srgb, var(--background) 92%, var(--foreground) 8%);
+}
+
+.active {
+  background: var(--foreground);
+  color: var(--background);
+  border-color: transparent;
+}
+
+.menu {
+  position: relative;
+}
+
+.menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu summary::after {
+  content: "▾";
+  margin-left: 10px;
+  font-size: 12px;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 220px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(127, 127, 127, 0.18);
+  background: color-mix(in srgb, var(--background) 96%, var(--foreground) 4%);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+  z-index: 10;
+}
+
+.menuLink {
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-family: var(--font-geist-sans);
+  font-size: 14px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.menuLink:hover {
+  background: color-mix(in srgb, var(--background) 90%, var(--foreground) 10%);
+}
+
+.menuLinkActive {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.menu:not([open]) .panel {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .nav {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .trigger,
+  .menu {
+    width: 100%;
+  }
+
+  .panel {
+    position: static;
+    margin-top: 8px;
+    width: 100%;
+    min-width: 0;
+    box-shadow: none;
+  }
+}
