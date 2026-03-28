@@ -1,0 +1,48 @@
+export const authPages = {
+  login: {
+    eyebrow: 'Welcome back',
+    heroTitle: 'Sign in to continue where you left off.',
+    heroDescription:
+      'Access your profile, saved settings, and protected tools with your email and password.',
+    title: 'Log in',
+    description: 'Use your account credentials to access the application.',
+    form: {
+      email: 'Email',
+      password: 'Password',
+      submit: 'Log in',
+      submitting: 'Logging in...',
+      invalidCredentials: 'Email or password is incorrect.',
+      requiredEmail: 'Email is required.',
+      invalidEmail: 'Enter a valid email address.',
+      requiredPassword: 'Password is required.',
+      registerPrompt: 'Need an account?',
+      registerCta: 'Create one',
+    },
+  },
+  register: {
+    eyebrow: 'Create your account',
+    heroTitle: 'Start with a secure account and get into the app immediately.',
+    heroDescription:
+      'Register with a valid email and a strong password. You will be signed in as soon as your account is created.',
+    title: 'Register',
+    description: 'Set up your account with credentials that meet the security requirements.',
+    form: {
+      name: 'Display name',
+      email: 'Email',
+      password: 'Password',
+      confirmPassword: 'Confirm password',
+      submit: 'Create account',
+      submitting: 'Creating account...',
+      requiredEmail: 'Email is required.',
+      invalidEmail: 'Enter a valid email address.',
+      requiredPassword: 'Password is required.',
+      weakPassword: 'Use at least 10 characters with uppercase, lowercase, and a number.',
+      requiredConfirmPassword: 'Please confirm your password.',
+      passwordMismatch: 'Passwords do not match.',
+      nameTooLong: 'Display name must be 80 characters or fewer.',
+      genericError: 'Account created, but automatic sign-in failed. Try logging in manually.',
+      loginPrompt: 'Already have an account?',
+      loginCta: 'Log in',
+    },
+  },
+};

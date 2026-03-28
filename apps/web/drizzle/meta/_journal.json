@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1771814130330,
+      "tag": "0000_shocking_mother_askani",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771883086981,
+      "tag": "0001_ambiguous_blur",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771883993435,
+      "tag": "0002_abnormal_infant_terrible",
+      "breakpoints": true
+    }
+  ]
+}
