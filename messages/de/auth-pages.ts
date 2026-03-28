@@ -1,0 +1,48 @@
+export const authPages = {
+  login: {
+    eyebrow: 'Willkommen zurueck',
+    heroTitle: 'Melde dich an und arbeite dort weiter, wo du zuletzt aufgehoert hast.',
+    heroDescription:
+      'Greife mit deiner E-Mail-Adresse und deinem Passwort auf Profil, Einstellungen und geschuetzte Bereiche zu.',
+    title: 'Anmelden',
+    description: 'Nutze deine Zugangsdaten, um auf die Anwendung zuzugreifen.',
+    form: {
+      email: 'E-Mail',
+      password: 'Passwort',
+      submit: 'Anmelden',
+      submitting: 'Anmeldung laeuft...',
+      invalidCredentials: 'E-Mail oder Passwort ist nicht korrekt.',
+      requiredEmail: 'E-Mail ist erforderlich.',
+      invalidEmail: 'Gib eine gueltige E-Mail-Adresse ein.',
+      requiredPassword: 'Passwort ist erforderlich.',
+      registerPrompt: 'Noch kein Konto?',
+      registerCta: 'Registrieren',
+    },
+  },
+  register: {
+    eyebrow: 'Konto erstellen',
+    heroTitle: 'Erstelle ein sicheres Konto und lege sofort los.',
+    heroDescription:
+      'Registriere dich mit einer gueltigen E-Mail-Adresse und einem starken Passwort. Danach wirst du direkt angemeldet.',
+    title: 'Registrieren',
+    description: 'Lege dein Konto mit Zugangsdaten an, die die Sicherheitsregeln erfuellen.',
+    form: {
+      name: 'Anzeigename',
+      email: 'E-Mail',
+      password: 'Passwort',
+      confirmPassword: 'Passwort bestaetigen',
+      submit: 'Konto erstellen',
+      submitting: 'Konto wird erstellt...',
+      requiredEmail: 'E-Mail ist erforderlich.',
+      invalidEmail: 'Gib eine gueltige E-Mail-Adresse ein.',
+      requiredPassword: 'Passwort ist erforderlich.',
+      weakPassword: 'Verwende mindestens 10 Zeichen mit Grossbuchstaben, Kleinbuchstaben und einer Zahl.',
+      requiredConfirmPassword: 'Bitte bestaetige dein Passwort.',
+      passwordMismatch: 'Die Passwoerter stimmen nicht ueberein.',
+      nameTooLong: 'Der Anzeigename darf hoechstens 80 Zeichen lang sein.',
+      genericError: 'Konto erstellt, aber automatische Anmeldung fehlgeschlagen. Bitte manuell anmelden.',
+      loginPrompt: 'Bereits registriert?',
+      loginCta: 'Anmelden',
+    },
+  },
+};

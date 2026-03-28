@@ -1,0 +1,15 @@
+name: Main Tier
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  main-tier:
+    name: Main Tier
+    uses: ./.github/workflows/tier-checks.yml
+    with:
+      tier-name: main
+      check-command: checks:main
