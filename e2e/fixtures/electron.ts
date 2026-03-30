@@ -12,7 +12,7 @@ export const test = base.extend<ElectronFixtures>({
     const appRoot = path.resolve(__dirname, '../..');
 
     const app = await electron.launch({
-      args: ['--no-sandbox', '--disable-gpu', appRoot],
+      args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', appRoot],
       env: {
         ...process.env,
         NODE_ENV: 'test',
