@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { test as base, expect, type ElectronApplication, type Page } from '@playwright/test';
 import { _electron as electron } from 'playwright';
+import electronPath from 'electron';
 
 type ElectronFixtures = {
   app: ElectronApplication;
@@ -12,7 +13,8 @@ export const test = base.extend<ElectronFixtures>({
     const appRoot = path.resolve(__dirname, '../..');
 
     const app = await electron.launch({
-      args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', appRoot],
+      executablePath: electronPath as unknown as string,
+      args: ['--no-sandbox', '--disable-gpu', appRoot],
       env: {
         ...process.env,
         NODE_ENV: 'test',
