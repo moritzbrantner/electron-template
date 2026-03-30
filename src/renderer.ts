@@ -1,6 +1,6 @@
 import './index.css';
 
-import { createSharedButtonLabel } from '@moritzbrantner/ui';
+import { createSharedButtonLabel } from '@repo/ui';
 import { AppRoute, createNavbar } from './navbar';
 
 type ThemeMode = 'light' | 'dark';
@@ -96,7 +96,7 @@ function createHomeScreen() {
 
   const sharedPackageBody = document.createElement('p');
   sharedPackageBody.textContent =
-    'This renderer imports a package from @moritzbrantner/platform-packages so future shared UI or utility modules can be added without changing the Electron wiring.';
+    'This renderer imports a shared workspace package so future shared UI or utility modules can be added without changing the Electron wiring.';
 
   const sharedPackageLabel = document.createElement('code');
   sharedPackageLabel.className = 'shared-package-label';
