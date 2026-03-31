@@ -8,6 +8,21 @@ importers:
 
   .:
     dependencies:
+      '@moritzbrantner/electron-commands':
+        specifier: file:packages/electron-commands
+        version: file:packages/electron-commands
+      '@moritzbrantner/electron-documents':
+        specifier: file:packages/electron-documents
+        version: file:packages/electron-documents
+      '@moritzbrantner/electron-json-store':
+        specifier: file:packages/electron-json-store
+        version: file:packages/electron-json-store
+      '@moritzbrantner/electron-preferences':
+        specifier: file:packages/electron-preferences
+        version: file:packages/electron-preferences
+      '@moritzbrantner/electron-window-state':
+        specifier: file:packages/electron-window-state
+        version: file:packages/electron-window-state
       '@moritzbrantner/ui':
         specifier: ^0.1.0
         version: 0.1.0
@@ -497,6 +512,21 @@ packages:
   '@malept/cross-spawn-promise@2.0.0':
     resolution: {integrity: sha512-1DpKU0Z5ThltBwjNySMC14g0CkbyhCaz9FkhxqNsZI6uAPJXFS8cMXlBKo26FJ8ZuW6S9GCMcR9IO5k2X5/9Fg==}
     engines: {node: '>= 12.13.0'}
+
+  '@moritzbrantner/electron-commands@file:packages/electron-commands':
+    resolution: {directory: packages/electron-commands, type: directory}
+
+  '@moritzbrantner/electron-documents@file:packages/electron-documents':
+    resolution: {directory: packages/electron-documents, type: directory}
+
+  '@moritzbrantner/electron-json-store@file:packages/electron-json-store':
+    resolution: {directory: packages/electron-json-store, type: directory}
+
+  '@moritzbrantner/electron-preferences@file:packages/electron-preferences':
+    resolution: {directory: packages/electron-preferences, type: directory}
+
+  '@moritzbrantner/electron-window-state@file:packages/electron-window-state':
+    resolution: {directory: packages/electron-window-state, type: directory}
 
   '@moritzbrantner/ui@0.1.0':
     resolution: {integrity: sha512-msi+k/+fttd1hLqcbYzrscLWNbqqkrLDXJHYSVF3adnA9un7z5+8RmrALyw6vUPZGQLWR9ThNIBFl7I+hcYcyA==, tarball: https://npm.pkg.github.com/download/@moritzbrantner/ui/0.1.0/c6240a5571cb947c869babf8db68f33ed8902659}
@@ -3726,6 +3756,16 @@ snapshots:
   '@malept/cross-spawn-promise@2.0.0':
     dependencies:
       cross-spawn: 7.0.6
+
+  '@moritzbrantner/electron-commands@file:packages/electron-commands': {}
+
+  '@moritzbrantner/electron-documents@file:packages/electron-documents': {}
+
+  '@moritzbrantner/electron-json-store@file:packages/electron-json-store': {}
+
+  '@moritzbrantner/electron-preferences@file:packages/electron-preferences': {}
+
+  '@moritzbrantner/electron-window-state@file:packages/electron-window-state': {}
 
   '@moritzbrantner/ui@0.1.0': {}
 

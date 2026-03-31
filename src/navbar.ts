@@ -1,6 +1,7 @@
 export type AppRoute =
   | 'home'
   | 'settings'
+  | 'documents'
   | 'three'
   | 'react-hook-form'
   | 'uploads'
@@ -29,6 +30,13 @@ export function createNavbar(route: AppRoute): HTMLElement {
   settingsLink.textContent = 'Settings';
   if (route === 'settings') {
     settingsLink.className = 'is-active';
+  }
+
+  const documentsLink = document.createElement('a');
+  documentsLink.href = '#/documents';
+  documentsLink.textContent = 'Documents';
+  if (route === 'documents') {
+    documentsLink.className = 'is-active';
   }
 
   const threeLink = document.createElement('a');
@@ -62,6 +70,7 @@ export function createNavbar(route: AppRoute): HTMLElement {
   actions.append(
     homeLink,
     settingsLink,
+    documentsLink,
     threeLink,
     reactHookFormLink,
     uploadsLink,

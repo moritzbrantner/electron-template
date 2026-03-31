@@ -1,6 +1,8 @@
 import path from 'node:path';
 import { defineConfig } from 'vite';
 
+import { packageAliases } from './vite.package-aliases';
+
 export default defineConfig({
   base: './',
   build: {
@@ -9,5 +11,8 @@ export default defineConfig({
     rollupOptions: {
       input: path.resolve(__dirname, 'index.html'),
     },
+  },
+  resolve: {
+    alias: packageAliases,
   },
 });

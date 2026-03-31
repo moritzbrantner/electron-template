@@ -14,7 +14,7 @@
     "dev": "electron-forge start",
     "build": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts",
     "test": "pnpm test:unit && pnpm test:integration && pnpm test:e2e",
-    "test:unit": "node --test ./tests/unit.test.js",
+    "test:unit": "node --experimental-strip-types --test ./tests/unit.test.js ./tests/packages/*.test.mts",
     "test:integration": "node --test ./tests/integration.test.js",
     "test:e2e": "pnpm build && playwright test"
   },
@@ -44,7 +44,12 @@
     "vite": "^5.4.21"
   },
   "dependencies": {
+    "@moritzbrantner/electron-commands": "file:packages/electron-commands",
+    "@moritzbrantner/electron-documents": "file:packages/electron-documents",
+    "@moritzbrantner/electron-json-store": "file:packages/electron-json-store",
+    "@moritzbrantner/electron-preferences": "file:packages/electron-preferences",
     "@moritzbrantner/ui": "^0.1.0",
+    "@moritzbrantner/electron-window-state": "file:packages/electron-window-state",
     "@tanstack/react-query": "^5.90.21",
     "electron-squirrel-startup": "^1.0.1",
     "motion": "^12.35.2",

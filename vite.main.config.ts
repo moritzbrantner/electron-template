@@ -2,6 +2,8 @@ import { builtinModules } from 'node:module';
 import path from 'node:path';
 import { defineConfig } from 'vite';
 
+import { packageAliases } from './vite.package-aliases';
+
 export default defineConfig({
   build: {
     emptyOutDir: false,
@@ -19,5 +21,8 @@ export default defineConfig({
     },
     sourcemap: true,
     target: 'node20',
+  },
+  resolve: {
+    alias: packageAliases,
   },
 });

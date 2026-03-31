@@ -1,2 +1,13 @@
-// See the Electron documentation for details on how to use preload scripts:
-// https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
+import { contextBridge, ipcRenderer } from 'electron';
+
+import { createCommandsBridge } from '@moritzbrantner/electron-commands/preload';
+import { createDocumentsBridge } from '@moritzbrantner/electron-documents/preload';
+import { createPreferencesBridge } from '@moritzbrantner/electron-preferences/preload';
+
+import type { DesktopPreferences } from './platform/shared/preferences';
+
+contextBridge.exposeInMainWorld('desktop', {
+  commands: createCommandsBridge(ipcRenderer),
+  documents: createDocumentsBridge(ipcRenderer),
+  preferences: createPreferencesBridge<DesktopPreferences>(ipcRenderer),
+});
