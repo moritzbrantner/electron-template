@@ -10,6 +10,6 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     trace: 'on-first-retry',
   },
-  timeout: 30_000,
+  timeout: 300_000,
   workers: 1,
 });

@@ -16,7 +16,7 @@ type ElectronFixtures = {
 
 export const test = base.extend<ElectronFixtures>({
   app: async ({}, use) => {
-    const appRoot = path.resolve(__dirname, "../../..");
+    const appRoot = path.resolve(__dirname, "../..");
     const packageJsonPath = path.join(appRoot, "package.json");
 
     if (!fs.existsSync(packageJsonPath)) {
