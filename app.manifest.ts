@@ -6,7 +6,7 @@ export const appManifest = {
   packageName: 'desktop',
   entryWorkspace: 'apps/desktop',
   releaseCadence: 'independent',
-  sharedPackages: ['@repo/upload-playbook'],
+  sharedPackages: ['@moritzbrantnerupload-playbook'],
   featureFlags: ['library', 'uploads', 'react-query'],
   deployment: {
     runtime: 'electron',

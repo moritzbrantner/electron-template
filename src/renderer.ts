@@ -1,6 +1,6 @@
 import './index.css';
 
-import { createSharedButtonLabel } from '@repo/ui';
+import { createSharedButtonLabel } from '@moritzbrantner/ui';
 import { AppRoute, createNavbar } from './navbar';
 
 type ThemeMode = 'light' | 'dark';

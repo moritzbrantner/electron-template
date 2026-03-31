@@ -6,7 +6,7 @@ const path = require('node:path');
 test('desktop renderer includes a theme selector with persistence and navbar mounting', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '../src/renderer.ts'), 'utf8');
 
-  assert.match(source, /@repo\/ui/);
+  assert.match(source, /@moritzbrantner\/ui/);
   assert.match(source, /createSharedButtonLabel/);
   assert.match(source, /desktop-theme/);
   assert.match(source, /Light mode/);

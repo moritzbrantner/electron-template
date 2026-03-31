@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@moritzbrantner/ui':
-        specifier: link:../platform-packages/packages/ui
-        version: link:../platform-packages/packages/ui
+        specifier: ^0.1.0
+        version: 0.1.0
       '@tanstack/react-query':
         specifier: ^5.90.21
         version: 5.95.2(react@19.2.4)
@@ -497,6 +497,9 @@ packages:
   '@malept/cross-spawn-promise@2.0.0':
     resolution: {integrity: sha512-1DpKU0Z5ThltBwjNySMC14g0CkbyhCaz9FkhxqNsZI6uAPJXFS8cMXlBKo26FJ8ZuW6S9GCMcR9IO5k2X5/9Fg==}
     engines: {node: '>= 12.13.0'}
+
+  '@moritzbrantner/ui@0.1.0':
+    resolution: {integrity: sha512-msi+k/+fttd1hLqcbYzrscLWNbqqkrLDXJHYSVF3adnA9un7z5+8RmrALyw6vUPZGQLWR9ThNIBFl7I+hcYcyA==, tarball: https://npm.pkg.github.com/download/@moritzbrantner/ui/0.1.0/c6240a5571cb947c869babf8db68f33ed8902659}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -3723,6 +3726,8 @@ snapshots:
   '@malept/cross-spawn-promise@2.0.0':
     dependencies:
       cross-spawn: 7.0.6
+
+  '@moritzbrantner/ui@0.1.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
