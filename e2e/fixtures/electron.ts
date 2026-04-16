@@ -16,7 +16,7 @@ type ElectronFixtures = {
 };
 
 export const test = base.extend<ElectronFixtures>({
-  userDataDir: async ({}, use, testInfo) => {
+  userDataDir: async (_fixtures, use, testInfo) => {
     await use(testInfo.outputPath('user-data'));
   },
   app: async ({ userDataDir }, use) => {
