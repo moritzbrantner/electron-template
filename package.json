@@ -1,5 +1,5 @@
 {
-  "name": "desktop",
+  "name": "electron-template",
   "productName": "desktop",
   "version": "1.0.0",
   "description": "Reusable Electron desktop template with typed main/preload packages and app-level examples.",
@@ -13,6 +13,7 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
+    "sync:monorepo": "node ./scripts/dispatch-monorepo-update.mjs",
     "lint": "eslint --ext .ts,.tsx .",
     "dev": "electron-forge start",
     "build": "bun run build:packages && bun run build:app",
@@ -26,8 +27,12 @@
     "test:package": "./scripts/run-node.sh ./scripts/verify-package.mjs"
   },
   "keywords": [],
-  "author": "patty",
+  "author": "Moritz Brantner",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moritzbrantner/electron-template.git"
+  },
   "devDependencies": {
     "@electron-forge/cli": "^7.11.1",
     "@electron-forge/maker-deb": "^7.11.1",
