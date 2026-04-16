@@ -66,5 +66,8 @@
     "electron-squirrel-startup": "^1.0.1",
     "nanoid": "^5.1.6"
   },
-  "packageManager": "pnpm@10.33.0"
+  "packageManager": "pnpm@10.33.0",
+  "workspaces": [
+    "packages/*"
+  ]
 }
