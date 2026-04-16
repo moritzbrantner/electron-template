@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import { test } from 'bun:test';
 import { EventEmitter } from 'node:events';
 
 import { createCommandsService } from '../../packages/electron-commands/src/main.ts';
@@ -11,7 +11,7 @@ import { createJsonStore } from '../../packages/electron-json-store/src/main.ts'
 import { createPreferencesService } from '../../packages/electron-preferences/src/main.ts';
 import { createWindowStateManager } from '../../packages/electron-window-state/src/main.ts';
 
-await test('json store loads defaults, validates, migrates, and writes atomically', async () => {
+test('json store loads defaults, validates, migrates, and writes atomically', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'desktop-json-store-'));
   const defaults = { enabled: true, theme: 'system' };
   const filePath = path.join(directory, 'preferences.json');
@@ -91,7 +91,7 @@ await test('json store loads defaults, validates, migrates, and writes atomicall
   await rm(directory, { force: true, recursive: true });
 });
 
-await test('preferences service supports get, set, reset, validation, and subscriptions', async () => {
+test('preferences service supports get, set, reset, validation, and subscriptions', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'desktop-preferences-'));
   const filePath = path.join(directory, 'preferences.json');
   const defaults = {
@@ -157,7 +157,7 @@ await test('preferences service supports get, set, reset, validation, and subscr
   await rm(directory, { force: true, recursive: true });
 });
 
-await test('commands service rejects duplicates and disabled commands', async () => {
+test('commands service rejects duplicates and disabled commands', async () => {
   assert.throws(
     () =>
       createCommandsService({
@@ -253,7 +253,7 @@ await test('commands service rejects duplicates and disabled commands', async ()
   assert.equal(menuStub.items[0].enabled, false);
 });
 
-await test('documents service supports save, save as, open recent, dirty state, and cancelation', async () => {
+test('documents service supports save, save as, open recent, dirty state, and cancelation', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'desktop-documents-'));
   const documentFilePath = path.join(directory, 'note.desktop.json');
   const recentFilePath = path.join(directory, 'second.desktop.json');
@@ -382,7 +382,7 @@ await test('documents service supports save, save as, open recent, dirty state, 
   await rm(directory, { force: true, recursive: true });
 });
 
-await test('window state manager restores and persists bounds plus maximize/fullscreen flags', async () => {
+test('window state manager restores and persists bounds plus maximize/fullscreen flags', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'desktop-window-state-'));
   const store = createJsonStore({
     defaultValue: {},

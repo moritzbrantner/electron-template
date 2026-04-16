@@ -17,39 +17,34 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 24
-          cache: pnpm
-          registry-url: https://npm.pkg.github.com
-          scope: '@moritzbrantner'
+          bun-version-file: .bun-version
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: Lint
-        run: pnpm lint
+        run: bun run lint
 
       - name: Build
-        run: pnpm build
+        run: bun run build
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: Run unit tests
-        run: pnpm test:unit
+        run: bun run test:unit
 
       - name: Run integration tests
-        run: pnpm test:integration
+        run: bun run test:integration
 
       - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps
+        run: bunx --bun playwright install --with-deps
 
       - name: Run end-to-end tests
-        run: pnpm test:e2e
+        run: bun run test:e2e
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
