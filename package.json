@@ -18,11 +18,12 @@
     "build": "pnpm build:packages && pnpm build:app",
     "build:app": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts",
     "build:packages": "pnpm -r --filter './packages/*' run build",
-    "ci": "pnpm lint && pnpm build && pnpm test:unit && pnpm test:integration && pnpm test:e2e",
+    "ci": "pnpm lint && pnpm build && pnpm test:unit && pnpm test:integration && pnpm test:e2e && pnpm test:package",
     "test": "pnpm test:unit && pnpm test:integration && pnpm test:e2e",
     "test:unit": "./scripts/run-node.sh --experimental-strip-types --test ./tests/unit.test.js ./tests/packages/*.test.mts",
     "test:integration": "./scripts/run-node.sh --test ./tests/integration.test.js",
-    "test:e2e": "pnpm build && ./scripts/run-node.sh ./node_modules/playwright/cli.js test"
+    "test:e2e": "pnpm build && ./scripts/run-node.sh ./node_modules/playwright/cli.js test",
+    "test:package": "./scripts/run-node.sh ./scripts/verify-package.mjs"
   },
   "keywords": [],
   "author": "patty",
