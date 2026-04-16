@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import test from 'node:test';
+import { test } from 'bun:test';
 
 import { createJsonStore } from '../../packages/electron-json-store/src/main.ts';
 import { createUploadsService } from '../../src/platform/main/create-uploads-service.ts';
@@ -26,7 +26,7 @@ async function waitFor(predicate: () => Promise<boolean>, timeoutInMs = 500) {
   throw new Error('Timed out waiting for condition.');
 }
 
-await test('uploads service deduplicates files, supports retry and cancelation, and persists state', async () => {
+test('uploads service deduplicates files, supports retry and cancelation, and persists state', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'desktop-uploads-'));
   const successFilePath = path.join(directory, 'success.txt');
   const failFilePath = path.join(directory, 'will-fail.txt');
@@ -90,7 +90,7 @@ await test('uploads service deduplicates files, supports retry and cancelation, 
   await rm(directory, { force: true, recursive: true });
 });
 
-await test('uploads service recovers in-flight work after restart', async () => {
+test('uploads service recovers in-flight work after restart', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'desktop-uploads-recovery-'));
   const store = createJsonStore({
     defaultValue: defaultUploadsState,

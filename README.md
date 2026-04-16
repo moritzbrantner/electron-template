@@ -51,25 +51,25 @@ Document files themselves are saved where the user chooses.
 Install dependencies:
 
 ```bash
-pnpm install
+bun install
 ```
 
 Run the app in development:
 
 ```bash
-pnpm dev
+bun run dev
 ```
 
 Build packages and the Electron app:
 
 ```bash
-pnpm build
+bun run build
 ```
 
 Run the quality gate locally:
 
 ```bash
-pnpm ci
+bun run ci
 ```
 
 Verify that the repository still produces a packaged desktop app:
@@ -81,7 +81,7 @@ pnpm test:package
 Package distributables:
 
 ```bash
-pnpm make
+bun run make
 ```
 
 ## Extending the template
