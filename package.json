@@ -19,12 +19,12 @@
     "build": "bun run build:packages && bun run build:app",
     "build:app": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts",
     "build:packages": "bun run --filter '@moritzbrantner/*' build",
-    "ci": "bun run lint && bun run build && bun run test:unit && bun run test:integration && bun run test:e2e",
+    "ci": "bun run lint && bun run build && bun run test:unit && bun run test:integration && bun run test:package && bun run test:e2e",
     "test": "bun run test:unit && bun run test:integration && bun run test:e2e",
     "test:unit": "bun test ./tests/unit.test.js ./tests/packages/*.test.mts",
     "test:integration": "bun test ./tests/integration.test.js",
     "test:e2e": "bun run build && bunx --bun playwright test",
-    "test:package": "./scripts/run-node.sh ./scripts/verify-package.mjs"
+    "test:package": "node ./scripts/verify-package.mjs"
   },
   "keywords": [],
   "author": "Moritz Brantner",
