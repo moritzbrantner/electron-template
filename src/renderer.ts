@@ -10,6 +10,10 @@ import {
   resolveThemePreference,
   type DesktopPreferences,
 } from './platform/shared/preferences';
+import {
+  defaultUploadsState,
+  type UploadItem,
+} from './platform/shared/uploads';
 
 const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -27,6 +31,7 @@ const appState = {
   documents: defaultDocumentState,
   preferences: defaultDesktopPreferences,
   ready: false,
+  uploads: defaultUploadsState,
 };
 
 function applyTheme(preferences: DesktopPreferences) {
@@ -45,18 +50,6 @@ function getCurrentRoute(): AppRoute {
 
   if (window.location.hash === '#/uploads') {
     return 'uploads';
-  }
-
-  if (window.location.hash === '#/communication') {
-    return 'communication';
-  }
-
-  if (window.location.hash === '#/three') {
-    return 'three';
-  }
-
-  if (window.location.hash === '#/react-hook-form') {
-    return 'react-hook-form';
   }
 
   return 'home';
@@ -83,45 +76,54 @@ function createScreenFrame(eyebrowText: string, titleText: string, descriptionTe
   return screen;
 }
 
+function createCard(titleText: string, bodyText: string) {
+  const card = document.createElement('article');
+  card.className = 'overview-card';
+
+  const title = document.createElement('h2');
+  title.textContent = titleText;
+
+  const body = document.createElement('p');
+  body.textContent = bodyText;
+
+  card.append(title, body);
+  return card;
+}
+
 function createHomeScreen() {
   const screen = createScreenFrame(
     'Desktop foundation',
-    'Hello Electron!',
-    'This template now wires reusable platform packages for preferences, commands, document save/load, and window state while keeping app-specific UI at the root.',
+    'Electron template',
+    'A reusable desktop starter with typed main/preload services, persistent documents, persistent uploads, and package-level platform primitives.',
   );
 
   const grid = document.createElement('div');
   grid.className = 'overview-grid';
 
-  const sharedPackageCard = document.createElement('article');
-  sharedPackageCard.className = 'overview-card';
-
-  const sharedPackageTitle = document.createElement('h2');
-  sharedPackageTitle.textContent = 'Shared platform package';
-
-  const sharedPackageBody = document.createElement('p');
-  sharedPackageBody.textContent =
-    'The renderer consumes the same final package names you can publish later under the @moritzbrantner scope.';
+  const sharedPackageCard = createCard(
+    'Shared platform package',
+    'The app consumes the same final package names you can publish later under the @moritzbrantner scope.',
+  );
 
   const sharedPackageLabel = document.createElement('code');
   sharedPackageLabel.className = 'shared-package-label';
   sharedPackageLabel.textContent = createSharedButtonLabel({ label: 'desktop-launch' });
-
-  sharedPackageCard.append(sharedPackageTitle, sharedPackageBody, sharedPackageLabel);
+  sharedPackageCard.append(sharedPackageLabel);
 
   const featuresCard = document.createElement('article');
   featuresCard.className = 'overview-card';
 
   const featuresTitle = document.createElement('h2');
-  featuresTitle.textContent = 'Foundation features';
+  featuresTitle.textContent = 'Template baseline';
 
   const featuresList = document.createElement('ul');
   featuresList.className = 'overview-list';
 
   [
-    'Preferences now persist through a typed preload-safe store.',
+    'Preferences persist through a typed preload-safe store.',
     'Documents support save, save as, reopen recent, and dirty state.',
-    'CmdOrCtrl+, / N / O / S hotkeys run through a reusable command registry.',
+    'Uploads support queueing, retry, cancelation, persistence, and restart recovery.',
+    'Commands flow through a reusable registry with menu-state refresh hooks.',
   ].forEach((text) => {
     const item = document.createElement('li');
     item.textContent = text;
@@ -129,7 +131,18 @@ function createHomeScreen() {
   });
 
   featuresCard.append(featuresTitle, featuresList);
-  grid.append(sharedPackageCard, featuresCard);
+
+  const structureCard = createCard(
+    'Architecture boundary',
+    'Packages hold reusable desktop primitives. App-specific workflows, like uploads, stay in the root app layer until they prove reusable.',
+  );
+
+  const qualityCard = createCard(
+    'Build quality',
+    'The workspace now targets Node 24, builds package dist outputs, and is intended to run lint, build, unit, integration, and end-to-end checks in CI.',
+  );
+
+  grid.append(sharedPackageCard, featuresCard, structureCard, qualityCard);
   screen.append(grid);
 
   return screen;
@@ -227,11 +240,17 @@ function createSettingsScreen() {
   return screen;
 }
 
+function createMetaLine(text: string) {
+  const line = document.createElement('span');
+  line.textContent = text;
+  return line;
+}
+
 function createDocumentsScreen() {
   const screen = createScreenFrame(
     'Save and load',
     'Documents',
-    'This route is backed by reusable document workflow packages and the application command registry.',
+    'This route is backed by reusable document workflow packages and session-scoped renderer state.',
   );
 
   const toolbar = document.createElement('div');
@@ -264,11 +283,14 @@ function createDocumentsScreen() {
 
   const meta = document.createElement('div');
   meta.className = 'document-meta';
-  meta.innerHTML = `
-    <strong>${appState.documents.displayName}</strong>
-    <span>${appState.documents.filePath ?? 'No file path yet'}</span>
-    <span>${appState.documents.statusMessage}</span>
-  `;
+
+  const nameLine = document.createElement('strong');
+  nameLine.textContent = appState.documents.displayName;
+  meta.append(
+    nameLine,
+    createMetaLine(appState.documents.filePath ?? 'No file path yet'),
+    createMetaLine(appState.documents.statusMessage),
+  );
 
   summary.append(statusBadge, meta);
 
@@ -310,11 +332,15 @@ function createDocumentsScreen() {
       const recentButton = document.createElement('button');
       recentButton.type = 'button';
       recentButton.className = 'recent-item';
-      recentButton.innerHTML = `
-        <strong>${recentDocument.name}</strong>
-        <span>${recentDocument.filePath}</span>
-        <span>${new Date(recentDocument.lastOpenedAt).toLocaleString()}</span>
-      `;
+
+      const name = document.createElement('strong');
+      name.textContent = recentDocument.name;
+
+      recentButton.append(
+        name,
+        createMetaLine(recentDocument.filePath),
+        createMetaLine(new Date(recentDocument.lastOpenedAt).toLocaleString()),
+      );
       recentButton.addEventListener('click', () => {
         void window.desktop.documents.openRecent(recentDocument.filePath);
       });
@@ -329,125 +355,309 @@ function createDocumentsScreen() {
   return screen;
 }
 
-function createThreeScreen() {
-  const screen = createScreenFrame(
-    'Three dimensional',
-    'Three.js',
-    'A dedicated route for 3D demos, experiments, and future scene work in the desktop app.',
-  );
+function formatBytes(sizeInBytes: number) {
+  if (sizeInBytes < 1024) {
+    return `${sizeInBytes} B`;
+  }
 
-  const showcase = document.createElement('div');
-  showcase.className = 'three-showcase';
+  if (sizeInBytes < 1024 * 1024) {
+    return `${(sizeInBytes / 1024).toFixed(1)} KB`;
+  }
 
-  const orbit = document.createElement('div');
-  orbit.className = 'three-orbit';
-
-  const cube = document.createElement('div');
-  cube.className = 'three-cube';
-
-  [
-    'three-face three-face--front',
-    'three-face three-face--back',
-    'three-face three-face--right',
-    'three-face three-face--left',
-    'three-face three-face--top',
-    'three-face three-face--bottom',
-  ].forEach((className) => {
-    const face = document.createElement('span');
-    face.className = className;
-    cube.append(face);
-  });
-
-  showcase.append(orbit, cube);
-  screen.append(showcase);
-  return screen;
+  return `${(sizeInBytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function createReactHookFormScreen() {
-  const screen = createScreenFrame(
-    'Form state overview',
-    'React Hook Form',
-    'A reference page for the core React Hook Form pieces and how they affect required, dirty, validity, and reset.',
-  );
+function formatTimestamp(timestamp: string | null) {
+  if (!timestamp) {
+    return 'Not completed yet';
+  }
 
-  const grid = document.createElement('div');
-  grid.className = 'overview-grid';
+  return new Date(timestamp).toLocaleString();
+}
+
+function createUploadButton(
+  label: string,
+  onClick: () => void,
+  options?: { disabled?: boolean; primary?: boolean },
+) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = options?.primary ? 'upload-button upload-button--primary' : 'upload-button';
+  button.disabled = Boolean(options?.disabled);
+  button.textContent = label;
+  button.addEventListener('click', onClick);
+  return button;
+}
+
+function getDroppedPaths(dataTransfer: DataTransfer | null) {
+  if (!dataTransfer) {
+    return [];
+  }
+
+  return Array.from(dataTransfer.files)
+    .map((file) => (file as File & { path?: string }).path)
+    .filter((filePath): filePath is string => typeof filePath === 'string' && filePath.length > 0);
+}
+
+function createUploadStatus(item: UploadItem) {
+  const badge = document.createElement('span');
+  badge.className = `upload-status upload-status--${item.status}`;
+  badge.textContent = item.status;
+  return badge;
+}
+
+function createUploadProgress(item: UploadItem) {
+  const progress = document.createElement('div');
+  progress.className = 'upload-progress';
+
+  const bar = document.createElement('span');
+  bar.className = 'upload-progress__bar';
+  bar.style.width = `${item.progress}%`;
+
+  progress.append(bar);
+  return progress;
+}
+
+function createUploadActions(item: UploadItem) {
+  const actions = document.createElement('div');
+  actions.className = 'upload-actions';
+
+  if (item.status === 'queued') {
+    actions.append(
+      createUploadButton('Start', () => {
+        void window.desktop.uploads.startUpload(item.id);
+      }, { primary: true }),
+      createUploadButton('Cancel', () => {
+        void window.desktop.uploads.cancelUpload(item.id);
+      }),
+    );
+  } else if (item.status === 'uploading') {
+    actions.append(
+      createUploadButton('Cancel', () => {
+        void window.desktop.uploads.cancelUpload(item.id);
+      }),
+    );
+  } else if (item.status === 'failed' || item.status === 'canceled') {
+    actions.append(
+      createUploadButton('Retry', () => {
+        void window.desktop.uploads.retryUpload(item.id);
+      }, { primary: true }),
+    );
+  }
+
+  return actions;
+}
+
+function createUploadQueueItem(item: UploadItem) {
+  const queueItem = document.createElement('article');
+  queueItem.className = 'upload-queue-item';
+
+  const meta = document.createElement('div');
+  meta.className = 'upload-queue-item__meta';
+
+  const copyStack = document.createElement('div');
+  copyStack.className = 'upload-copy-stack';
+
+  const title = document.createElement('h3');
+  title.textContent = item.name;
+
+  const detail = document.createElement('p');
+  detail.className = 'upload-queue-item__detail';
+  detail.textContent = item.filePath;
+
+  copyStack.append(title, detail);
+  meta.append(copyStack, createUploadStatus(item));
+
+  const stats = document.createElement('div');
+  stats.className = 'upload-summary-grid';
 
   [
-    ['useForm', 'Creates the form API, default values, and formState for the rest of the tree.'],
-    ['register', 'Connects uncontrolled inputs and attaches validation rules at the field edge.'],
-    ['Controller', 'Bridges controlled components into the same dirty and validity model.'],
-    ['reset', 'Restores defaults, clears errors, and can establish a new clean baseline.'],
-  ].forEach(([titleText, bodyText]) => {
-    const card = document.createElement('article');
-    card.className = 'overview-card';
-
-    const title = document.createElement('h2');
-    title.textContent = titleText;
-
-    const body = document.createElement('p');
-    body.textContent = bodyText;
-
-    card.append(title, body);
-    grid.append(card);
+    `Size: ${formatBytes(item.size)}`,
+    `Progress: ${item.progress}%`,
+    `Attempts: ${item.attempts}`,
+    `Completed: ${formatTimestamp(item.completedAt)}`,
+  ].forEach((text) => {
+    const stat = document.createElement('span');
+    stat.className = 'upload-queue-item__detail';
+    stat.textContent = text;
+    stats.append(stat);
   });
 
-  screen.append(grid);
-  return screen;
+  const error = document.createElement('p');
+  error.className = 'upload-queue-item__detail';
+  error.textContent = item.error ?? 'Ready for upload.';
+
+  queueItem.append(meta, createUploadProgress(item), stats, error, createUploadActions(item));
+  return queueItem;
 }
 
 function createUploadScreen() {
   const screen = createScreenFrame(
-    'Cross-app upload reference',
+    'Upload workflow',
     'Uploads',
-    'Uploads stay app-specific here, while the reusable platform layer handles preferences, commands, persistence, and documents.',
+    'An app-specific upload exemplar with file intake, normalized queue state, retry and cancel controls, persistence, and restart recovery.',
   );
 
-  const card = document.createElement('article');
-  card.className = 'overview-card';
-  card.innerHTML = `
-    <h2>Renderer picker</h2>
-    <p>This route remains a placeholder for future drag-and-drop and file intake work.</p>
-    <p>Current upload items and queue normalization can now be layered on top of the new package-backed foundation.</p>
-  `;
-  screen.append(card);
-  return screen;
-}
+  const hero = document.createElement('article');
+  hero.className = 'upload-card upload-card--hero';
 
-function createCommunicationScreen() {
-  const screen = createScreenFrame(
-    'Communication category',
-    'Realtime communication',
-    'A reference page for the main building blocks behind low-latency collaboration and shared-state syncing.',
-  );
+  const copyStack = document.createElement('div');
+  copyStack.className = 'upload-copy-stack';
 
-  const grid = document.createElement('div');
-  grid.className = 'overview-grid';
+  const eyebrow = document.createElement('p');
+  eyebrow.className = 'upload-card__eyebrow';
+  eyebrow.textContent = 'App-specific example';
+
+  const heroTitle = document.createElement('h2');
+  heroTitle.textContent = 'Persistent file intake';
+
+  const heroBody = document.createElement('p');
+  heroBody.textContent =
+    'Uploads remain app-specific while the shared platform packages cover persistence, commands, preferences, and window lifecycle.';
+
+  const noteList = document.createElement('ul');
+  noteList.className = 'upload-note-list';
 
   [
-    {
-      body: 'Websockets keep a persistent connection open so the app can exchange low-latency events.',
-      title: 'Websockets',
-    },
-    {
-      body: 'CRDTs allow multiple replicas to edit the same document concurrently and still converge.',
-      title: 'CRDTs',
-    },
-  ].forEach((section) => {
-    const card = document.createElement('article');
-    card.className = 'overview-card';
-
-    const title = document.createElement('h2');
-    title.textContent = section.title;
-
-    const body = document.createElement('p');
-    body.textContent = section.body;
-
-    card.append(title, body);
-    grid.append(card);
+    'Drop files into the queue or pick them from the main-process dialog.',
+    'Queued items persist across restarts and in-flight work recovers as retryable failures.',
+    'Any filename containing "fail" simulates a retryable transport error on its first attempt.',
+  ].forEach((text) => {
+    const item = document.createElement('li');
+    item.textContent = text;
+    noteList.append(item);
   });
 
-  screen.append(grid);
+  copyStack.append(eyebrow, heroTitle, heroBody, noteList);
+
+  const infoStack = document.createElement('div');
+  infoStack.className = 'upload-info-stack';
+
+  const items = appState.uploads.items;
+  const queuedCount = items.filter((item) => item.status === 'queued').length;
+  const uploadingCount = items.filter((item) => item.status === 'uploading').length;
+  const failedCount = items.filter((item) => item.status === 'failed').length;
+  const completedCount = items.filter((item) => item.status === 'completed').length;
+
+  [
+    `Queue size: ${items.length}`,
+    `Queued: ${queuedCount}`,
+    `Uploading: ${uploadingCount}`,
+    `Failed: ${failedCount}`,
+    `Completed: ${completedCount}`,
+    `Status: ${appState.uploads.statusMessage}`,
+  ].forEach((text) => {
+    const row = document.createElement('div');
+    row.className = 'upload-info-row';
+
+    const body = document.createElement('p');
+    body.textContent = text;
+    row.append(body);
+    infoStack.append(row);
+  });
+
+  hero.append(copyStack, infoStack);
+
+  const surfaceGrid = document.createElement('div');
+  surfaceGrid.className = 'upload-surface-grid';
+
+  const dropzone = document.createElement('div');
+  dropzone.className = 'upload-dropzone';
+  dropzone.tabIndex = 0;
+
+  const dropTitle = document.createElement('strong');
+  dropTitle.textContent = 'Drop files here';
+
+  const dropText = document.createElement('p');
+  dropText.textContent =
+    'Drag local files into this surface, or use the picker to queue them through the Electron main process.';
+
+  const dropButtons = document.createElement('div');
+  dropButtons.className = 'document-toolbar';
+
+  const hasQueuedUploads = queuedCount > 0;
+  const hasCompletedUploads = completedCount > 0;
+
+  dropButtons.append(
+    createUploadButton('Pick files', () => {
+      void window.desktop.uploads.pickFiles();
+    }, { primary: true }),
+    createUploadButton('Start queued', () => {
+      void window.desktop.uploads.startAll();
+    }, { disabled: !hasQueuedUploads }),
+    createUploadButton('Clear completed', () => {
+      void window.desktop.uploads.clearCompleted();
+    }, { disabled: !hasCompletedUploads }),
+  );
+
+  const setDropzoneActive = (isActive: boolean) => {
+    dropzone.classList.toggle('is-active', isActive);
+  };
+
+  dropzone.addEventListener('dragenter', (event) => {
+    event.preventDefault();
+    setDropzoneActive(true);
+  });
+
+  dropzone.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    setDropzoneActive(true);
+  });
+
+  dropzone.addEventListener('dragleave', (event) => {
+    if (event.target === dropzone) {
+      setDropzoneActive(false);
+    }
+  });
+
+  dropzone.addEventListener('drop', (event) => {
+    event.preventDefault();
+    setDropzoneActive(false);
+
+    const droppedPaths = getDroppedPaths(event.dataTransfer);
+
+    if (droppedPaths.length === 0) {
+      return;
+    }
+
+    void window.desktop.uploads.addDroppedFiles(droppedPaths);
+  });
+
+  dropzone.append(dropTitle, dropText, dropButtons);
+
+  const queue = document.createElement('section');
+  queue.className = 'upload-queue';
+
+  const queueHeader = document.createElement('div');
+  queueHeader.className = 'upload-queue__header';
+
+  const queueTitle = document.createElement('h2');
+  queueTitle.textContent = 'Upload queue';
+
+  const queueStatus = document.createElement('p');
+  queueStatus.className = 'upload-empty-state';
+  queueStatus.textContent = appState.uploads.statusMessage;
+
+  queueHeader.append(queueTitle, queueStatus);
+
+  const queueList = document.createElement('div');
+  queueList.className = 'upload-queue__list';
+
+  if (items.length === 0) {
+    const emptyState = document.createElement('p');
+    emptyState.className = 'upload-empty-state';
+    emptyState.textContent = 'No uploads queued yet.';
+    queueList.append(emptyState);
+  } else {
+    items.forEach((item) => {
+      queueList.append(createUploadQueueItem(item));
+    });
+  }
+
+  queue.append(queueHeader, queueList);
+  surfaceGrid.append(dropzone, queue);
+  screen.append(hero, surfaceGrid);
+
   return screen;
 }
 
@@ -476,23 +686,8 @@ function renderApp() {
     return;
   }
 
-  if (route === 'three') {
-    app.append(createThreeScreen());
-    return;
-  }
-
-  if (route === 'react-hook-form') {
-    app.append(createReactHookFormScreen());
-    return;
-  }
-
   if (route === 'uploads') {
     app.append(createUploadScreen());
-    return;
-  }
-
-  if (route === 'communication') {
-    app.append(createCommunicationScreen());
     return;
   }
 
@@ -532,13 +727,15 @@ function handleKeyboardShortcuts(event: KeyboardEvent) {
 }
 
 async function bootstrap() {
-  const [preferences, documents] = await Promise.all([
+  const [preferences, documents, uploads] = await Promise.all([
     window.desktop.preferences.getAll(),
     window.desktop.documents.getState(),
+    window.desktop.uploads.getState(),
   ]);
 
   appState.preferences = preferences;
   appState.documents = documents;
+  appState.uploads = uploads;
   appState.ready = true;
   applyTheme(preferences);
 
@@ -550,6 +747,11 @@ async function bootstrap() {
 
   window.desktop.documents.subscribe((nextDocuments) => {
     appState.documents = nextDocuments;
+    renderApp();
+  });
+
+  window.desktop.uploads.subscribe((nextUploads) => {
+    appState.uploads = nextUploads;
     renderApp();
   });
 

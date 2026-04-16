@@ -8,7 +8,7 @@ import { test } from './fixtures/electron';
 
 const shortcutKey = process.platform === 'darwin' ? 'Meta' : 'Control';
 
-async function relaunchElectronApp() {
+async function relaunchElectronApp(userDataDir: string) {
   const appRoot = path.resolve(__dirname, '..');
 
   return electron.launch({
@@ -18,16 +18,17 @@ async function relaunchElectronApp() {
       ...process.env,
       NODE_ENV: 'test',
       PLAYWRIGHT_E2E: '1',
+      PLAYWRIGHT_E2E_USER_DATA_DIR: userDataDir,
     },
   });
 }
 
 test('renders the default desktop route with a shared package label', async ({ page }) => {
-  await expect(page.getByRole('heading', { name: 'Hello Electron!' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Electron template' })).toBeVisible();
   await expect(page.getByText('shared:desktop-launch')).toBeVisible();
 });
 
-test('persists the selected theme across relaunch', async ({ app, page }) => {
+test('persists the selected theme across relaunch', async ({ app, page, userDataDir }) => {
   await page.getByRole('link', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Dark mode' }).click();
 
@@ -35,7 +36,7 @@ test('persists the selected theme across relaunch', async ({ app, page }) => {
 
   await app.close();
 
-  const relaunchedApp = await relaunchElectronApp();
+  const relaunchedApp = await relaunchElectronApp(userDataDir);
   const relaunchedPage = await relaunchedApp.firstWindow();
 
   await expect
@@ -66,4 +67,23 @@ test('saves and reopens a document through the command-backed document flow', as
 
   await page.getByRole('button', { name: /e2e-document\.desktop\.json/ }).click();
   await expect(editor).toHaveValue('Playwright save flow');
+});
+
+test('queues an upload and restores it after relaunch', async ({ app, page, userDataDir }) => {
+  await page.getByRole('link', { name: 'Uploads' }).click();
+  await page.getByRole('button', { name: 'Pick files' }).click();
+
+  await expect(page.getByRole('heading', { name: 'upload-success.txt' })).toBeVisible();
+  await expect(page.getByText('Queued 1 file for upload.', { exact: true })).toBeVisible();
+
+  await app.close();
+
+  const relaunchedApp = await relaunchElectronApp(userDataDir);
+  const relaunchedPage = await relaunchedApp.firstWindow();
+
+  await relaunchedPage.getByRole('link', { name: 'Uploads' }).click();
+  await expect(relaunchedPage.getByRole('heading', { name: 'upload-success.txt' })).toBeVisible();
+  await expect(relaunchedPage.getByText('Queued 1 file for upload.', { exact: true })).toBeVisible();
+
+  await relaunchedApp.close();
 });

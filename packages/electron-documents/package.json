@@ -1,14 +1,37 @@
 {
   "name": "@moritzbrantner/electron-documents",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
-  "main": "./src/main.ts",
-  "types": "./src/main.ts",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/main.js",
+  "types": "./dist/main.d.ts",
+  "dependencies": {
+    "@moritzbrantner/electron-json-store": "workspace:*"
+  },
+  "peerDependencies": {
+    "electron": ">=40"
+  },
+  "scripts": {
+    "build": "tsup src/main.ts src/preload.ts src/renderer.ts src/shared.ts --format esm --dts --clean"
+  },
   "exports": {
-    "./main": "./src/main.ts",
-    "./preload": "./src/preload.ts",
-    "./renderer": "./src/renderer.ts",
-    "./shared": "./src/shared.ts"
+    "./main": {
+      "types": "./dist/main.d.ts",
+      "import": "./dist/main.js"
+    },
+    "./preload": {
+      "types": "./dist/preload.d.ts",
+      "import": "./dist/preload.js"
+    },
+    "./renderer": {
+      "types": "./dist/renderer.d.ts",
+      "import": "./dist/renderer.js"
+    },
+    "./shared": {
+      "types": "./dist/shared.d.ts",
+      "import": "./dist/shared.js"
+    }
   }
 }

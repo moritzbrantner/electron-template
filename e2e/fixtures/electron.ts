@@ -12,11 +12,14 @@ import electronPath from "electron";
 type ElectronFixtures = {
   app: ElectronApplication;
   page: Page;
+  userDataDir: string;
 };
 
 export const test = base.extend<ElectronFixtures>({
-  // eslint-disable-next-line no-empty-pattern
-  app: async ({}, use) => {
+  userDataDir: async (_fixtures, use, testInfo) => {
+    await use(testInfo.outputPath('user-data'));
+  },
+  app: async ({ userDataDir }, use) => {
     const appRoot = path.resolve(__dirname, "../..");
     const packageJsonPath = path.join(appRoot, "package.json");
 
@@ -35,6 +38,7 @@ export const test = base.extend<ElectronFixtures>({
         ...process.env,
         NODE_ENV: "test",
         PLAYWRIGHT_E2E: "1",
+        PLAYWRIGHT_E2E_USER_DATA_DIR: userDataDir,
       },
     });
 

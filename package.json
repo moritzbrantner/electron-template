@@ -2,9 +2,12 @@
   "name": "desktop",
   "productName": "desktop",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "Reusable Electron desktop template with typed main/preload packages and app-level examples.",
   "main": ".vite/build/main.js",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
@@ -12,11 +15,14 @@
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "dev": "electron-forge start",
-    "build": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts",
+    "build": "pnpm build:packages && pnpm build:app",
+    "build:app": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts",
+    "build:packages": "pnpm -r --filter './packages/*' run build",
+    "ci": "pnpm lint && pnpm build && pnpm test:unit && pnpm test:integration && pnpm test:e2e",
     "test": "pnpm test:unit && pnpm test:integration && pnpm test:e2e",
-    "test:unit": "node --experimental-strip-types --test ./tests/unit.test.js ./tests/packages/*.test.mts",
-    "test:integration": "node --test ./tests/integration.test.js",
-    "test:e2e": "pnpm build && playwright test"
+    "test:unit": "./scripts/run-node.sh --experimental-strip-types --test ./tests/unit.test.js ./tests/packages/*.test.mts",
+    "test:integration": "./scripts/run-node.sh --test ./tests/integration.test.js",
+    "test:e2e": "pnpm build && ./scripts/run-node.sh ./node_modules/playwright/cli.js test"
   },
   "keywords": [],
   "author": "patty",
@@ -40,25 +46,19 @@
     "eslint": "^8.57.1",
     "eslint-plugin-import": "^2.32.0",
     "playwright": "^1.58.2",
-    "typescript": "~4.5.5",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3",
     "vite": "^5.4.21"
   },
   "dependencies": {
-    "@moritzbrantner/electron-commands": "file:packages/electron-commands",
-    "@moritzbrantner/electron-documents": "file:packages/electron-documents",
-    "@moritzbrantner/electron-json-store": "file:packages/electron-json-store",
-    "@moritzbrantner/electron-preferences": "file:packages/electron-preferences",
+    "@moritzbrantner/electron-commands": "workspace:*",
+    "@moritzbrantner/electron-documents": "workspace:*",
+    "@moritzbrantner/electron-json-store": "workspace:*",
+    "@moritzbrantner/electron-preferences": "workspace:*",
     "@moritzbrantner/ui": "^0.1.0",
-    "@moritzbrantner/electron-window-state": "file:packages/electron-window-state",
-    "@tanstack/react-query": "^5.90.21",
+    "@moritzbrantner/electron-window-state": "workspace:*",
     "electron-squirrel-startup": "^1.0.1",
-    "motion": "^12.35.2",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-hook-form": "^7.71.2",
-    "react-router-dom": "^7.13.1",
-    "tailwindcss": "^4.2.1",
-    "zustand": "^5.0.11"
+    "nanoid": "^5.1.6"
   },
   "packageManager": "pnpm@10.33.0"
 }

@@ -235,6 +235,22 @@ await test('commands service rejects duplicates and disabled commands', async ()
     { control: true, key: 's' },
   );
   assert.equal(ranSave, true);
+
+  const menuService = createCommandsService({
+    definitions: [
+      {
+        execute: () => undefined,
+        id: 'toggle',
+        isEnabled: () => false,
+        label: 'Toggle',
+      },
+    ],
+  });
+  const menuStub = {
+    items: [{ id: 'command:toggle', enabled: true }],
+  };
+  menuService.applyMenuState(menuStub as never);
+  assert.equal(menuStub.items[0].enabled, false);
 });
 
 await test('documents service supports save, save as, open recent, dirty state, and cancelation', async () => {
@@ -336,6 +352,32 @@ await test('documents service supports save, save as, open recent, dirty state, 
   await cancelService.updateDraft('dirty');
   await cancelService.newDocument({} as never);
   assert.equal((await cancelService.getState()).content, 'dirty');
+
+  const sessionService = createDocumentsService({
+    defaultContent: 'blank',
+    dialogAdapter,
+    getBroadcastTargets: () => [],
+    recentStore,
+    serializer: {
+      deserialize(raw: string) {
+        const parsed = JSON.parse(raw) as { content: string };
+        return { content: parsed.content };
+      },
+      extension: 'desktop.json',
+      name: 'Desktop',
+      serialize(value) {
+        return JSON.stringify({ content: value.content });
+      },
+    },
+  });
+  const firstWindow = { id: 1 };
+  const secondWindow = { id: 2 };
+
+  await sessionService.updateDraft('first window', firstWindow as never);
+  await sessionService.updateDraft('second window', secondWindow as never);
+
+  assert.equal((await sessionService.getState(firstWindow as never)).content, 'first window');
+  assert.equal((await sessionService.getState(secondWindow as never)).content, 'second window');
 
   await rm(directory, { force: true, recursive: true });
 });

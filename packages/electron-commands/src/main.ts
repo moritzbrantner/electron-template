@@ -1,6 +1,13 @@
 import { createRequire } from 'node:module';
 
-import type { BrowserWindow, IpcMain, IpcMainInvokeEvent, MenuItemConstructorOptions } from 'electron';
+import type {
+  BrowserWindow,
+  IpcMain,
+  IpcMainInvokeEvent,
+  Menu,
+  MenuItem,
+  MenuItemConstructorOptions,
+} from 'electron';
 
 import { commandsChannels, type CommandState } from './shared.ts';
 
@@ -25,6 +32,7 @@ export interface CommandsServiceOptions {
 }
 
 export function createCommandsService(options: CommandsServiceOptions) {
+  const menuItemIdPrefix = 'command:';
   const commandMap = new Map<string, CommandDefinition>();
   const acceleratorMap = new Map<string, string>();
 
@@ -102,6 +110,7 @@ export function createCommandsService(options: CommandsServiceOptions) {
     }
 
     await definition.execute(context);
+    refreshApplicationMenu(window);
   }
 
   function list(window = options.getWindowForState?.() ?? null): CommandState[] {
@@ -121,12 +130,52 @@ export function createCommandsService(options: CommandsServiceOptions) {
     return {
       accelerator: definition.accelerator,
       click: async (_menuItem, browserWindow) => {
-        await run(commandId, browserWindow);
+        const targetWindow =
+          browserWindow && 'webContents' in browserWindow ? (browserWindow as BrowserWindow) : null;
+        await run(commandId, targetWindow);
       },
-      enabled: true,
+      enabled: isEnabled(commandId),
+      id: `${menuItemIdPrefix}${commandId}`,
       label: definition.label,
       ...overrides,
     };
+  }
+
+  function walkMenuItems(menuItems: MenuItem[], visitor: (item: MenuItem) => void) {
+    menuItems.forEach((item) => {
+      visitor(item);
+
+      if (item.submenu) {
+        walkMenuItems(item.submenu.items, visitor);
+      }
+    });
+  }
+
+  function applyMenuState(menu: Menu, window = options.getWindowForState?.() ?? null) {
+    walkMenuItems(menu.items, (item) => {
+      if (typeof item.id !== 'string' || !item.id.startsWith(menuItemIdPrefix)) {
+        return;
+      }
+
+      const commandId = item.id.slice(menuItemIdPrefix.length);
+      item.enabled = isEnabled(commandId, window);
+    });
+  }
+
+  function refreshApplicationMenu(window = options.getWindowForState?.() ?? null) {
+    const { Menu: ElectronMenu } = require('electron') as typeof import('electron');
+
+    if (typeof ElectronMenu?.getApplicationMenu !== 'function') {
+      return;
+    }
+
+    const applicationMenu = ElectronMenu.getApplicationMenu();
+
+    if (!applicationMenu) {
+      return;
+    }
+
+    applyMenuState(applicationMenu, window);
   }
 
   function attachToWindow(browserWindow: BrowserWindow) {
@@ -161,11 +210,13 @@ export function createCommandsService(options: CommandsServiceOptions) {
   }
 
   return {
+    applyMenuState,
     attachToWindow,
     createMenuItem,
     installIpc,
     isEnabled,
     list,
+    refreshApplicationMenu,
     run,
   };
 }

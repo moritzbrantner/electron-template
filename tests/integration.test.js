@@ -22,9 +22,12 @@ test('desktop main process composes the reusable platform layer', () => {
   assert.match(platformSource, /createJsonStore/);
   assert.match(platformSource, /createPreferencesService/);
   assert.match(platformSource, /createDocumentsService/);
+  assert.match(platformSource, /createUploadsService/);
   assert.match(platformSource, /createCommandsService/);
   assert.match(platformSource, /createWindowStateManager/);
   assert.match(platformSource, /CmdOrCtrl\+,/);
   assert.match(platformSource, /CmdOrCtrl\+S/);
-  assert.match(platformSource, /Project link not configured yet/);
+  assert.match(platformSource, /uploads\.installIpc/);
+  assert.match(platformSource, /commands\.applyMenuState/);
+  assert.match(platformSource, /commands\.refreshApplicationMenu/);
 });

@@ -3,6 +3,7 @@ import type { DocumentsBridge } from '@moritzbrantner/electron-documents/rendere
 import type { PreferencesBridge } from '@moritzbrantner/electron-preferences/renderer';
 
 import type { DesktopPreferences } from './platform/shared/preferences';
+import type { UploadsBridge } from './platform/shared/uploads';
 
 declare global {
   interface Window {
@@ -10,6 +11,7 @@ declare global {
       commands: CommandsBridge;
       documents: DocumentsBridge;
       preferences: PreferencesBridge<DesktopPreferences>;
+      uploads: UploadsBridge;
     };
   }
 }
