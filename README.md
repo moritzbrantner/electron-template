@@ -75,7 +75,7 @@ bun run ci
 Verify that the repository still produces a packaged desktop app:
 
 ```bash
-pnpm test:package
+bun run test:package
 ```
 
 Package distributables:
