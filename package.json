@@ -23,6 +23,7 @@
     "test:unit": "bun test ./tests/unit.test.js ./tests/packages/*.test.mts",
     "test:integration": "bun test ./tests/integration.test.js",
     "test:e2e": "bun run build && bunx --bun playwright test"
+    "test:package": "./scripts/run-node.sh ./scripts/verify-package.mjs"
   },
   "keywords": [],
   "author": "patty",
