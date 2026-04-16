@@ -14,6 +14,7 @@ import {
   createDesktopPreferencesStore,
   loadDesktopPreferencesForLaunch,
 } from '../../src/platform/main/desktop-preferences-store.ts';
+import { isDesktopPreferences } from '../../src/platform/shared/preferences.ts';
 
 test('json store loads defaults, validates, migrates, and writes atomically', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'desktop-json-store-'));
@@ -103,20 +104,20 @@ test('preferences service supports get, set, reset, validation, and subscription
     display: { useGpu: true },
     developer: { openDevToolsOnLaunch: false },
     documents: { reopenLastDocument: false },
+    hotkeys: {
+      navigation: {
+        home: 'CmdOrCtrl+1',
+        settings: 'CmdOrCtrl+2',
+        documents: 'CmdOrCtrl+3',
+        uploads: 'CmdOrCtrl+4',
+      },
+    },
   };
   const broadcastCalls = [];
   const store = createJsonStore({
     defaultValue: defaults,
     filePath,
-    validate: (value): value is typeof defaults =>
-      Boolean(
-        value &&
-          typeof value === 'object' &&
-          typeof (value as typeof defaults).appearance?.theme === 'string' &&
-          typeof (value as typeof defaults).display?.useGpu === 'boolean' &&
-          typeof (value as typeof defaults).developer?.openDevToolsOnLaunch === 'boolean' &&
-          typeof (value as typeof defaults).documents?.reopenLastDocument === 'boolean',
-      ),
+    validate: isDesktopPreferences,
     version: 1,
   });
   const preferences = createPreferencesService({
@@ -131,15 +132,7 @@ test('preferences service supports get, set, reset, validation, and subscription
         },
       ] as never,
     store,
-    validate: (value): value is typeof defaults =>
-      Boolean(
-        value &&
-          typeof value === 'object' &&
-          typeof (value as typeof defaults).appearance?.theme === 'string' &&
-          typeof (value as typeof defaults).display?.useGpu === 'boolean' &&
-          typeof (value as typeof defaults).developer?.openDevToolsOnLaunch === 'boolean' &&
-          typeof (value as typeof defaults).documents?.reopenLastDocument === 'boolean',
-      ),
+    validate: isDesktopPreferences,
   });
 
   const updates = [];
@@ -157,9 +150,40 @@ test('preferences service supports get, set, reset, validation, and subscription
   assert.equal(updates.at(-1)?.display.useGpu, false);
   assert.equal(broadcastCalls.at(-1)?.display.useGpu, false);
 
+  await preferences.set('hotkeys', {
+    navigation: {
+      home: 'Alt+H',
+      settings: 'Alt+S',
+      documents: 'Alt+D',
+      uploads: 'Alt+U',
+    },
+  });
+  assert.deepEqual(await preferences.get('hotkeys'), {
+    navigation: {
+      home: 'Alt+H',
+      settings: 'Alt+S',
+      documents: 'Alt+D',
+      uploads: 'Alt+U',
+    },
+  });
+
   await assert.rejects(
     async () => {
       await preferences.set('developer', { openDevToolsOnLaunch: 'yes' } as never);
+    },
+    /Invalid preferences update/,
+  );
+
+  await assert.rejects(
+    async () => {
+      await preferences.set('hotkeys', {
+        navigation: {
+          home: 'Alt+H',
+          settings: 'Alt+H',
+          documents: 'Alt+D',
+          uploads: 'Alt+U',
+        },
+      } as never);
     },
     /Invalid preferences update/,
   );
@@ -169,7 +193,7 @@ test('preferences service supports get, set, reset, validation, and subscription
   await rm(directory, { force: true, recursive: true });
 });
 
-test('desktop preferences store migrates display preferences for launch and runtime reads', async () => {
+test('desktop preferences store migrates display and hotkey preferences for launch and runtime reads', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'desktop-launch-preferences-'));
   const preferencesPath = path.join(directory, 'moritzbrantner', 'preferences.json');
 
@@ -179,9 +203,10 @@ test('desktop preferences store migrates display preferences for launch and runt
     preferencesPath,
     JSON.stringify(
       {
-        version: 1,
+        version: 2,
         data: {
           appearance: { theme: 'dark' },
+          display: { useGpu: false },
           developer: { openDevToolsOnLaunch: true },
           documents: { reopenLastDocument: true },
         },
@@ -195,12 +220,26 @@ test('desktop preferences store migrates display preferences for launch and runt
   const store = createDesktopPreferencesStore(directory);
   const launchPreferences = loadDesktopPreferencesForLaunch(directory);
 
-  assert.deepEqual(launchPreferences.display, { useGpu: true });
+  assert.deepEqual(launchPreferences.display, { useGpu: false });
+  assert.deepEqual(launchPreferences.hotkeys.navigation, {
+    home: 'CmdOrCtrl+1',
+    settings: 'CmdOrCtrl+2',
+    documents: 'CmdOrCtrl+3',
+    uploads: 'CmdOrCtrl+4',
+  });
   assert.deepEqual(await store.load(), {
     appearance: { theme: 'dark' },
-    display: { useGpu: true },
+    display: { useGpu: false },
     developer: { openDevToolsOnLaunch: true },
     documents: { reopenLastDocument: true },
+    hotkeys: {
+      navigation: {
+        home: 'CmdOrCtrl+1',
+        settings: 'CmdOrCtrl+2',
+        documents: 'CmdOrCtrl+3',
+        uploads: 'CmdOrCtrl+4',
+      },
+    },
   });
 
   await rm(directory, { force: true, recursive: true });

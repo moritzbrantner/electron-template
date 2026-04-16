@@ -2,13 +2,20 @@ import './index.css';
 
 import { createSharedButtonLabel } from '@moritzbrantner/ui';
 
+import type { CommandState } from '@moritzbrantner/electron-commands/renderer';
 import type { DocumentState } from '@moritzbrantner/electron-documents/renderer';
 
-import { AppRoute, createNavbar } from './navbar';
+import { appRouteDefinitions, type AppRoute, createNavbar, getRouteFromHash } from './navbar';
 import {
+  defaultNavigationHotkeys,
   defaultDesktopPreferences,
+  normalizeDesktopHotkeyAccelerator,
+  normalizeDesktopHotkeyKeyToken,
+  reservedDesktopHotkeys,
   resolveThemePreference,
+  splitDesktopHotkeyAccelerator,
   type DesktopPreferences,
+  type NavigationHotkeyName,
 } from './platform/shared/preferences';
 import {
   defaultUploadsState,
@@ -28,6 +35,7 @@ const defaultDocumentState: DocumentState = {
 };
 
 const appState = {
+  commands: [] as CommandState[],
   documents: defaultDocumentState,
   preferences: defaultDesktopPreferences,
   ready: false,
@@ -40,19 +48,17 @@ function applyTheme(preferences: DesktopPreferences) {
 }
 
 function getCurrentRoute(): AppRoute {
-  if (window.location.hash === '#/settings') {
-    return 'settings';
+  return getRouteFromHash(window.location.hash);
+}
+
+function navigateToRoute(route: AppRoute) {
+  const targetRoute = appRouteDefinitions.find((definition) => definition.route === route);
+
+  if (!targetRoute) {
+    return;
   }
 
-  if (window.location.hash === '#/documents') {
-    return 'documents';
-  }
-
-  if (window.location.hash === '#/uploads') {
-    return 'uploads';
-  }
-
-  return 'home';
+  window.location.hash = targetRoute.href;
 }
 
 function createScreenFrame(eyebrowText: string, titleText: string, descriptionText: string) {
@@ -88,6 +94,111 @@ function createCard(titleText: string, bodyText: string) {
 
   card.append(title, body);
   return card;
+}
+
+function createHotkeyPreview(accelerator: string) {
+  const preview = document.createElement('span');
+  preview.className = 'hotkey-preview';
+
+  splitDesktopHotkeyAccelerator(accelerator).forEach((token) => {
+    const keycap = document.createElement('kbd');
+    keycap.className = 'hotkey-kbd';
+    keycap.textContent = token;
+    preview.append(keycap);
+  });
+
+  return preview;
+}
+
+function createHotkeyDetail(text: string) {
+  const detail = document.createElement('p');
+  detail.className = 'hotkey-row__detail';
+  detail.textContent = text;
+  return detail;
+}
+
+function createHotkeyRow(
+  titleText: string,
+  descriptionText: string,
+  accelerator: string,
+  options?: { editable?: boolean; onChange?: (value: string, input: HTMLInputElement) => void },
+) {
+  const row = document.createElement('div');
+  row.className = 'hotkey-row';
+
+  const copy = document.createElement('div');
+  copy.className = 'hotkey-row__copy';
+
+  const title = document.createElement('strong');
+  title.textContent = titleText;
+  copy.append(title, createHotkeyDetail(descriptionText));
+
+  const controls = document.createElement('div');
+  controls.className = 'hotkey-row__controls';
+
+  if (options?.editable && options.onChange) {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'hotkey-input';
+    input.spellcheck = false;
+    input.autocomplete = 'off';
+    input.value = accelerator;
+    input.placeholder = 'CmdOrCtrl+1';
+    input.addEventListener('change', () => {
+      options.onChange?.(input.value, input);
+    });
+    controls.append(input);
+  }
+
+  controls.append(createHotkeyPreview(accelerator));
+  row.append(copy, controls);
+  return row;
+}
+
+function getCommandAccelerator(commandId: string) {
+  return appState.commands.find((command) => command.id === commandId)?.accelerator ?? null;
+}
+
+function normalizeKeyboardEventAccelerator(event: KeyboardEvent) {
+  const code = event.code;
+  let key: string | null = null;
+
+  if (code.startsWith('Digit') && code.length === 'Digit0'.length) {
+    key = code.slice('Digit'.length);
+  } else if (code.startsWith('Key') && code.length === 'KeyA'.length) {
+    key = code.slice('Key'.length);
+  } else if (code === 'Comma') {
+    key = ',';
+  } else if (code === 'Period') {
+    key = '.';
+  } else if (code === 'Slash') {
+    key = '/';
+  } else if (code === 'Minus') {
+    key = '-';
+  } else if (event.key.length === 1) {
+    key = normalizeDesktopHotkeyKeyToken(event.key);
+  }
+
+  if (!key) {
+    return null;
+  }
+
+  const parts: string[] = [];
+
+  if (event.ctrlKey || event.metaKey) {
+    parts.push('CmdOrCtrl');
+  }
+
+  if (event.altKey) {
+    parts.push('Alt');
+  }
+
+  if (event.shiftKey) {
+    parts.push('Shift');
+  }
+
+  parts.push(key);
+  return parts.join('+');
 }
 
 function createHomeScreen() {
@@ -262,8 +373,144 @@ function createSettingsScreen() {
   reopenToggle.append(reopenCheckbox, reopenText);
   documentsCard.append(documentsTitle, reopenToggle);
 
+  const hotkeysCard = document.createElement('article');
+  hotkeysCard.className = 'overview-card settings-card settings-card--wide';
+
+  const hotkeysTitle = document.createElement('h2');
+  hotkeysTitle.textContent = 'Hotkeys';
+
+  const hotkeysBody = document.createElement('p');
+  hotkeysBody.textContent =
+    'Page navigation shortcuts are editable and stored with your other desktop preferences.';
+
+  const editableHotkeys = document.createElement('div');
+  editableHotkeys.className = 'hotkey-list';
+
+  appRouteDefinitions.forEach((definition) => {
+    const currentHotkey = appState.preferences.hotkeys.navigation[definition.route];
+
+    editableHotkeys.append(
+      createHotkeyRow(
+        definition.label,
+        `Open the ${definition.label.toLowerCase()} page.`,
+        currentHotkey,
+        {
+          editable: true,
+          onChange(value, input) {
+            const normalizedValue = normalizeDesktopHotkeyAccelerator(value);
+
+            if (!normalizedValue) {
+              input.value = currentHotkey;
+              input.setCustomValidity('Use shortcuts like CmdOrCtrl+1 or Alt+Shift+D.');
+              input.reportValidity();
+              input.setCustomValidity('');
+              return;
+            }
+
+            const hasDuplicate = (
+              Object.entries(appState.preferences.hotkeys.navigation) as Array<
+                [NavigationHotkeyName, string]
+              >
+            ).some(
+              ([name, accelerator]) =>
+                name !== definition.route && accelerator === normalizedValue,
+            );
+
+            if (hasDuplicate) {
+              input.value = currentHotkey;
+              input.setCustomValidity('Each page shortcut must be unique.');
+              input.reportValidity();
+              input.setCustomValidity('');
+              return;
+            }
+
+            if (reservedDesktopHotkeys.includes(normalizedValue as (typeof reservedDesktopHotkeys)[number])) {
+              input.value = currentHotkey;
+              input.setCustomValidity('That shortcut is already reserved for a built-in command.');
+              input.reportValidity();
+              input.setCustomValidity('');
+              return;
+            }
+
+            if (normalizedValue === currentHotkey) {
+              input.value = normalizedValue;
+              return;
+            }
+
+            void window.desktop.preferences.set('hotkeys', {
+              navigation: {
+                ...appState.preferences.hotkeys.navigation,
+                [definition.route]: normalizedValue,
+              },
+            });
+          },
+        },
+      ),
+    );
+  });
+
+  const hotkeyActions = document.createElement('div');
+  hotkeyActions.className = 'document-toolbar';
+
+  const resetHotkeysButton = document.createElement('button');
+  resetHotkeysButton.type = 'button';
+  resetHotkeysButton.className = 'upload-button';
+  resetHotkeysButton.textContent = 'Reset navigation hotkeys';
+  resetHotkeysButton.addEventListener('click', () => {
+    void window.desktop.preferences.set('hotkeys', {
+      navigation: {
+        ...defaultNavigationHotkeys,
+      },
+    });
+  });
+  hotkeyActions.append(resetHotkeysButton);
+
+  const commandHotkeys = document.createElement('div');
+  commandHotkeys.className = 'hotkey-list';
+
+  [
+    {
+      accelerator: getCommandAccelerator('app.openPreferences') ?? 'CmdOrCtrl+,',
+      description: 'Open Settings directly from anywhere in the app.',
+      title: 'Preferences',
+    },
+    {
+      accelerator: getCommandAccelerator('document.new') ?? 'CmdOrCtrl+N',
+      description: 'Create a fresh document draft.',
+      title: 'New document',
+    },
+    {
+      accelerator: getCommandAccelerator('document.open') ?? 'CmdOrCtrl+O',
+      description: 'Open an existing desktop document.',
+      title: 'Open document',
+    },
+    {
+      accelerator: getCommandAccelerator('document.save') ?? 'CmdOrCtrl+S',
+      description: 'Save the active document.',
+      title: 'Save document',
+    },
+    {
+      accelerator: getCommandAccelerator('document.saveAs') ?? 'CmdOrCtrl+Shift+S',
+      description: 'Save the active document under a new path.',
+      title: 'Save document as',
+    },
+  ].forEach((hotkey) => {
+    commandHotkeys.append(
+      createHotkeyRow(hotkey.title, hotkey.description, hotkey.accelerator),
+    );
+  });
+
+  hotkeysCard.append(
+    hotkeysTitle,
+    hotkeysBody,
+    editableHotkeys,
+    hotkeyActions,
+    createHotkeyDetail('Built-in document shortcuts stay global and cannot be edited here yet.'),
+    commandHotkeys,
+  );
+
   grid.append(appearanceCard, displayCard, developerCard, documentsCard);
-  screen.append(grid);
+  screen.append(grid, hotkeysCard);
 
   return screen;
 }
@@ -697,7 +944,7 @@ function renderApp() {
 
   const route = getCurrentRoute();
   app.innerHTML = '';
-  app.append(createNavbar(route));
+  app.append(createNavbar(route, appState.preferences.hotkeys.navigation));
 
   if (!appState.ready) {
     app.append(createScreenFrame('Loading', 'Loading desktop services', 'Connecting to the preload bridge.'));
@@ -723,44 +970,37 @@ function renderApp() {
 }
 
 function handleKeyboardShortcuts(event: KeyboardEvent) {
-  if (!event.ctrlKey && !event.metaKey) {
+  if (event.repeat) {
     return;
   }
 
-  if (event.altKey) {
+  const accelerator = normalizeKeyboardEventAccelerator(event);
+
+  if (!accelerator) {
     return;
   }
 
-  const key = event.key.toLowerCase();
-  let commandId: string | null = null;
+  const matchedRoute = (
+    Object.entries(appState.preferences.hotkeys.navigation) as Array<[AppRoute, string]>
+  ).find(([, routeAccelerator]) => routeAccelerator === accelerator)?.[0];
 
-  if (key === ',') {
-    commandId = 'app.openPreferences';
-  } else if (key === 'n' && !event.shiftKey) {
-    commandId = 'document.new';
-  } else if (key === 'o' && !event.shiftKey) {
-    commandId = 'document.open';
-  } else if (key === 's' && event.shiftKey) {
-    commandId = 'document.saveAs';
-  } else if (key === 's') {
-    commandId = 'document.save';
-  }
-
-  if (!commandId) {
+  if (!matchedRoute || matchedRoute === getCurrentRoute()) {
     return;
   }
 
   event.preventDefault();
-  void window.desktop.commands.run(commandId);
+  navigateToRoute(matchedRoute);
 }
 
 async function bootstrap() {
-  const [preferences, documents, uploads] = await Promise.all([
+  const [preferences, documents, uploads, commands] = await Promise.all([
     window.desktop.preferences.getAll(),
     window.desktop.documents.getState(),
     window.desktop.uploads.getState(),
+    window.desktop.commands.list(),
   ]);
 
+  appState.commands = commands;
   appState.preferences = preferences;
   appState.documents = documents;
   appState.uploads = uploads;

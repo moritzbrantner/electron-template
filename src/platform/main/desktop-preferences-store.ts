@@ -6,14 +6,14 @@ import { createJsonStore } from '@moritzbrantner/electron-json-store/main';
 import {
   defaultDesktopPreferences,
   isDesktopPreferences,
+  normalizeDesktopNavigationHotkeys,
   type DesktopPreferences,
 } from '../shared/preferences';
 
 type DesktopPreferencesV1 = Omit<DesktopPreferences, 'display'>;
-
 const desktopPreferencesFileName = 'preferences.json';
 
-export const desktopPreferencesStoreVersion = 2;
+export const desktopPreferencesStoreVersion = 3;
 
 function cloneValue<TValue>(value: TValue): TValue {
   return structuredClone(value);
@@ -70,6 +70,19 @@ function normalizeDesktopPreferences(value: unknown): DesktopPreferences {
   };
 }
 
+function normalizeDesktopPreferencesWithHotkeys(value: unknown): DesktopPreferences {
+  const base = normalizeDesktopPreferences(value);
+  const current = isRecord(value) ? value : {};
+  const hotkeys = isRecord(current.hotkeys) ? current.hotkeys : {};
+
+  return {
+    ...base,
+    hotkeys: {
+      navigation: normalizeDesktopNavigationHotkeys(hotkeys.navigation),
+    },
+  };
+}
+
 function isEnvelope(value: unknown): value is { data: unknown; version: number } {
   return isRecord(value) && typeof value.version === 'number' && 'data' in value;
 }
@@ -88,6 +101,8 @@ function migrateDesktopPreferences(parsed: unknown) {
       data = normalizeDesktopPreferencesV1(data);
     } else if (version === 1) {
       data = normalizeDesktopPreferences(data);
+    } else if (version === 2) {
+      data = normalizeDesktopPreferencesWithHotkeys(data);
     } else {
       throw new Error(`Missing desktop preferences migration ${version}`);
     }
@@ -95,7 +110,7 @@ function migrateDesktopPreferences(parsed: unknown) {
     version += 1;
   }
 
-  return normalizeDesktopPreferences(data);
+  return normalizeDesktopPreferencesWithHotkeys(data);
 }
 
 export function getDesktopPreferencesFilePath(userDataPath: string) {
@@ -109,6 +124,7 @@ export function createDesktopPreferencesStore(userDataPath: string) {
     migrations: {
       0: (value) => normalizeDesktopPreferencesV1(value),
       1: (value) => normalizeDesktopPreferences(value),
+      2: (value) => normalizeDesktopPreferencesWithHotkeys(value),
     },
     resetOnError: true,
     validate: isDesktopPreferences,
