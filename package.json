@@ -46,6 +46,8 @@
     "@playwright/test": "^1.58.2",
     "@types/electron-squirrel-startup": "^1.0.2",
     "@types/node": "^22.19.15",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "electron": "40.6.1",
@@ -61,10 +63,13 @@
     "@moritzbrantner/electron-documents": "workspace:*",
     "@moritzbrantner/electron-json-store": "workspace:*",
     "@moritzbrantner/electron-preferences": "workspace:*",
-    "@moritzbrantner/ui": "^0.1.0",
     "@moritzbrantner/electron-window-state": "workspace:*",
+    "@moritzbrantner/maps": "file:../platform-packages/packages/maps",
+    "@moritzbrantner/ui": "^0.1.0",
     "electron-squirrel-startup": "^1.0.1",
-    "nanoid": "^5.1.6"
+    "nanoid": "^5.1.6",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   },
   "packageManager": "bun@1.3.12",
   "workspaces": [

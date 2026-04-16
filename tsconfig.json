@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
+    "jsx": "react-jsx",
     "allowJs": true,
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,
@@ -25,6 +26,8 @@
       "@moritzbrantner/electron-preferences/preload": ["packages/electron-preferences/src/preload.ts"],
       "@moritzbrantner/electron-preferences/renderer": ["packages/electron-preferences/src/renderer.ts"],
       "@moritzbrantner/electron-preferences/shared": ["packages/electron-preferences/src/shared.ts"],
+      "@moritzbrantner/maps": ["../platform-packages/packages/maps/src/index.ts"],
+      "@moritzbrantner/maps/styles.css": ["../platform-packages/packages/maps/styles.css"],
       "@moritzbrantner/electron-window-state/main": ["packages/electron-window-state/src/main.ts"],
       "@moritzbrantner/electron-window-state/shared": ["packages/electron-window-state/src/shared.ts"]
     },

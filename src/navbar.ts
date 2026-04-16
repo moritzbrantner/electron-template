@@ -1,4 +1,4 @@
-export type AppRoute = 'home' | 'settings' | 'documents' | 'uploads';
+export type AppRoute = 'home' | 'settings' | 'documents' | 'uploads' | 'maps';
 
 export function createNavbar(route: AppRoute): HTMLElement {
   const navbar = document.createElement('nav');
@@ -39,7 +39,14 @@ export function createNavbar(route: AppRoute): HTMLElement {
     uploadsLink.className = 'is-active';
   }
 
-  actions.append(homeLink, settingsLink, documentsLink, uploadsLink);
+  const mapsLink = document.createElement('a');
+  mapsLink.href = '#/maps';
+  mapsLink.textContent = 'Maps';
+  if (route === 'maps') {
+    mapsLink.className = 'is-active';
+  }
+
+  actions.append(homeLink, settingsLink, documentsLink, uploadsLink, mapsLink);
   navbar.append(brand, actions);
 
   return navbar;
