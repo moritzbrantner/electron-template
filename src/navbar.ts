@@ -6,14 +6,14 @@ export function createNavbar(route: AppRoute): HTMLElement {
 
   const brand = document.createElement('span');
   brand.className = 'navbar__brand';
-  brand.textContent = 'Desktop App';
+  brand.textContent = 'People Registry';
 
   const actions = document.createElement('div');
   actions.className = 'navbar__actions';
 
   const homeLink = document.createElement('a');
   homeLink.href = '#/';
-  homeLink.textContent = 'Home';
+  homeLink.textContent = 'Registry';
   if (route === 'home') {
     homeLink.className = 'is-active';
   }

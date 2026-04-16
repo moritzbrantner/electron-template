@@ -1,7 +1,5 @@
 import './index.css';
 
-import { createSharedButtonLabel } from '@moritzbrantner/ui';
-
 import type { DocumentState } from '@moritzbrantner/electron-documents/renderer';
 
 import { AppRoute, createNavbar } from './navbar';
@@ -32,6 +30,125 @@ const appState = {
   preferences: defaultDesktopPreferences,
   ready: false,
   uploads: defaultUploadsState,
+};
+
+type RegistryAvailability = 'open' | 'limited' | 'offline';
+
+type RegistryUser = {
+  id: string;
+  name: string;
+  handle: string;
+  role: string;
+  location: string;
+  timezone: string;
+  trustTier: 'Verified' | 'Established' | 'New';
+  availability: RegistryAvailability;
+  responseTime: string;
+  lastActive: string;
+  bio: string;
+  skills: string[];
+  lookingFor: string[];
+};
+
+const registryUsers: RegistryUser[] = [
+  {
+    id: 'mara-chen',
+    name: 'Mara Chen',
+    handle: '@maraops',
+    role: 'Operations strategist',
+    location: 'Singapore',
+    timezone: 'UTC+08',
+    trustTier: 'Verified',
+    availability: 'open',
+    responseTime: '~30 min',
+    lastActive: '2 minutes ago',
+    bio: 'Builds onboarding systems for multi-region communities and keeps volunteer programs from collapsing under scale.',
+    skills: ['Onboarding', 'Community ops', 'Playbooks', 'Escalation design'],
+    lookingFor: ['Partnership pilots', 'Volunteer leads'],
+  },
+  {
+    id: 'leo-martinez',
+    name: 'Leo Martinez',
+    handle: '@leoqueries',
+    role: 'Search relevance engineer',
+    location: 'Austin, US',
+    timezone: 'UTC-05',
+    trustTier: 'Verified',
+    availability: 'limited',
+    responseTime: '~4 hrs',
+    lastActive: '11 minutes ago',
+    bio: 'Tunes ranking models, synonym maps, and moderation-aware retrieval for large member directories.',
+    skills: ['Search', 'TypeScript', 'Ranking', 'Analytics'],
+    lookingFor: ['Data partners', 'DX feedback'],
+  },
+  {
+    id: 'ayana-okafor',
+    name: 'Ayana Okafor',
+    handle: '@ayanabuilds',
+    role: 'Frontend systems designer',
+    location: 'Berlin, DE',
+    timezone: 'UTC+02',
+    trustTier: 'Established',
+    availability: 'open',
+    responseTime: '~1 hr',
+    lastActive: '25 minutes ago',
+    bio: 'Designs interfaces for power users, especially dashboards that need to feel fast under dense operational data.',
+    skills: ['Design systems', 'Accessibility', 'CSS', 'Prototyping'],
+    lookingFor: ['UX audits', 'Design critiques'],
+  },
+  {
+    id: 'samir-patel',
+    name: 'Samir Patel',
+    handle: '@samirinfra',
+    role: 'Reliability engineer',
+    location: 'Toronto, CA',
+    timezone: 'UTC-04',
+    trustTier: 'Verified',
+    availability: 'offline',
+    responseTime: 'Tomorrow',
+    lastActive: '3 hours ago',
+    bio: 'Helps teams harden release pipelines and set service ownership boundaries before incidents force the issue.',
+    skills: ['Incident response', 'Observability', 'CI/CD', 'Runbooks'],
+    lookingFor: ['Platform reviews', 'Release audits'],
+  },
+  {
+    id: 'ines-fischer',
+    name: 'Ines Fischer',
+    handle: '@inesgrowth',
+    role: 'Marketplace growth lead',
+    location: 'Vienna, AT',
+    timezone: 'UTC+02',
+    trustTier: 'Established',
+    availability: 'open',
+    responseTime: '~45 min',
+    lastActive: '48 minutes ago',
+    bio: 'Pairs lifecycle messaging with member segmentation to turn quiet directories into active, trustable networks.',
+    skills: ['Growth loops', 'Lifecycle', 'Experiments', 'Segmentation'],
+    lookingFor: ['Referral tests', 'Activation experiments'],
+  },
+  {
+    id: 'noah-wright',
+    name: 'Noah Wright',
+    handle: '@noahdata',
+    role: 'Trust and safety analyst',
+    location: 'London, UK',
+    timezone: 'UTC+01',
+    trustTier: 'New',
+    availability: 'limited',
+    responseTime: '~6 hrs',
+    lastActive: '1 hour ago',
+    bio: 'Focuses on abuse triage, suspicious behavior signals, and profile-review workflows for member registries.',
+    skills: ['Moderation', 'Risk scoring', 'SQL', 'Policy ops'],
+    lookingFor: ['Policy feedback', 'Review tooling'],
+  },
+];
+
+const registryState = {
+  availability: 'all' as RegistryAvailability | 'all',
+  location: 'all',
+  query: '',
+  selectedUserId: registryUsers[0]?.id ?? '',
+  sort: 'relevance' as 'relevance' | 'alphabetical' | 'activity',
 };
 
 function applyTheme(preferences: DesktopPreferences) {
@@ -76,74 +193,458 @@ function createScreenFrame(eyebrowText: string, titleText: string, descriptionTe
   return screen;
 }
 
-function createCard(titleText: string, bodyText: string) {
-  const card = document.createElement('article');
-  card.className = 'overview-card';
+function getRegistryLocations() {
+  return ['all', ...new Set(registryUsers.map((user) => user.location))];
+}
 
-  const title = document.createElement('h2');
-  title.textContent = titleText;
+function getAvailabilityLabel(availability: RegistryAvailability) {
+  if (availability === 'open') {
+    return 'Open to connect';
+  }
 
-  const body = document.createElement('p');
-  body.textContent = bodyText;
+  if (availability === 'limited') {
+    return 'Limited availability';
+  }
 
-  card.append(title, body);
-  return card;
+  return 'Heads down';
+}
+
+function getAvailabilityClassName(availability: RegistryAvailability) {
+  return `registry-status registry-status--${availability}`;
+}
+
+function getRegistryScore(user: RegistryUser, queryTokens: string[]) {
+  if (queryTokens.length === 0) {
+    return 0;
+  }
+
+  const haystacks = [
+    user.name,
+    user.handle,
+    user.role,
+    user.location,
+    user.bio,
+    user.skills.join(' '),
+    user.lookingFor.join(' '),
+  ].map((value) => value.toLowerCase());
+
+  return queryTokens.reduce((score, token) => {
+    if (haystacks[0].includes(token)) {
+      return score + 5;
+    }
+
+    if (haystacks[1].includes(token) || haystacks[2].includes(token)) {
+      return score + 4;
+    }
+
+    if (haystacks[5].includes(token) || haystacks[6].includes(token)) {
+      return score + 3;
+    }
+
+    if (haystacks[3].includes(token) || haystacks[4].includes(token)) {
+      return score + 2;
+    }
+
+    return score;
+  }, 0);
+}
+
+function getFilteredRegistryUsers() {
+  const queryTokens = registryState.query
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  const filteredUsers = registryUsers.filter((user) => {
+    if (registryState.availability !== 'all' && user.availability !== registryState.availability) {
+      return false;
+    }
+
+    if (registryState.location !== 'all' && user.location !== registryState.location) {
+      return false;
+    }
+
+    if (queryTokens.length === 0) {
+      return true;
+    }
+
+    return getRegistryScore(user, queryTokens) > 0;
+  });
+
+  filteredUsers.sort((left, right) => {
+    if (registryState.sort === 'alphabetical') {
+      return left.name.localeCompare(right.name);
+    }
+
+    if (registryState.sort === 'activity') {
+      const leftIsOpen = left.availability === 'open' ? 1 : 0;
+      const rightIsOpen = right.availability === 'open' ? 1 : 0;
+
+      if (leftIsOpen !== rightIsOpen) {
+        return rightIsOpen - leftIsOpen;
+      }
+
+      return left.name.localeCompare(right.name);
+    }
+
+    const leftScore = getRegistryScore(left, queryTokens);
+    const rightScore = getRegistryScore(right, queryTokens);
+
+    if (leftScore !== rightScore) {
+      return rightScore - leftScore;
+    }
+
+    if (left.availability !== right.availability) {
+      return left.availability === 'open' ? -1 : 1;
+    }
+
+    return left.name.localeCompare(right.name);
+  });
+
+  return filteredUsers;
+}
+
+function createRegistryStat(label: string, value: string) {
+  const stat = document.createElement('article');
+  stat.className = 'registry-stat';
+
+  const number = document.createElement('strong');
+  number.textContent = value;
+
+  const text = document.createElement('span');
+  text.textContent = label;
+
+  stat.append(number, text);
+  return stat;
+}
+
+function createRegistryPill(text: string) {
+  const pill = document.createElement('span');
+  pill.className = 'registry-pill';
+  pill.textContent = text;
+  return pill;
+}
+
+function createRegistryInputLabel(labelText: string, input: HTMLElement) {
+  const label = document.createElement('label');
+  label.className = 'registry-filter';
+
+  const text = document.createElement('span');
+  text.className = 'registry-filter__label';
+  text.textContent = labelText;
+
+  label.append(text, input);
+  return label;
 }
 
 function createHomeScreen() {
   const screen = createScreenFrame(
-    'Desktop foundation',
-    'Electron template',
-    'A reusable desktop starter with typed main/preload services, persistent documents, persistent uploads, and package-level platform primitives.',
+    'Directory search',
+    'Search the user registry',
+    'Browse other members by name, role, skill, or location, then drill into the people who look relevant before you reach out.',
   );
 
-  const grid = document.createElement('div');
-  grid.className = 'overview-grid';
+  const filteredUsers = getFilteredRegistryUsers();
+  const selectedUser =
+    filteredUsers.find((user) => user.id === registryState.selectedUserId) ?? filteredUsers[0] ?? null;
 
-  const sharedPackageCard = createCard(
-    'Shared platform package',
-    'The app consumes the same final package names you can publish later under the @moritzbrantner scope.',
-  );
+  if (selectedUser) {
+    registryState.selectedUserId = selectedUser.id;
+  }
 
-  const sharedPackageLabel = document.createElement('code');
-  sharedPackageLabel.className = 'shared-package-label';
-  sharedPackageLabel.textContent = createSharedButtonLabel({ label: 'desktop-launch' });
-  sharedPackageCard.append(sharedPackageLabel);
+  const hero = document.createElement('section');
+  hero.className = 'registry-hero';
 
-  const featuresCard = document.createElement('article');
-  featuresCard.className = 'overview-card';
+  const controlPanel = document.createElement('div');
+  controlPanel.className = 'registry-panel';
 
-  const featuresTitle = document.createElement('h2');
-  featuresTitle.textContent = 'Template baseline';
+  const formTitle = document.createElement('h2');
+  formTitle.textContent = 'Find the right person fast';
 
-  const featuresList = document.createElement('ul');
-  featuresList.className = 'overview-list';
+  const formBody = document.createElement('p');
+  formBody.className = 'registry-panel__body';
+  formBody.textContent =
+    'Use the search bar for names, roles, or skills, then narrow the list by location and current availability.';
 
-  [
-    'Preferences persist through a typed preload-safe store.',
-    'Documents support save, save as, reopen recent, and dirty state.',
-    'Uploads support queueing, retry, cancelation, persistence, and restart recovery.',
-    'Commands flow through a reusable registry with menu-state refresh hooks.',
-  ].forEach((text) => {
-    const item = document.createElement('li');
-    item.textContent = text;
-    featuresList.append(item);
+  const controls = document.createElement('div');
+  controls.className = 'registry-controls';
+
+  const searchInput = document.createElement('input');
+  searchInput.className = 'registry-input registry-input--search';
+  searchInput.type = 'search';
+  searchInput.placeholder = 'Search “search”, “Berlin”, “design systems”…';
+  searchInput.value = registryState.query;
+  searchInput.addEventListener('input', () => {
+    registryState.query = searchInput.value;
+    renderApp();
   });
 
-  featuresCard.append(featuresTitle, featuresList);
+  const locationSelect = document.createElement('select');
+  locationSelect.className = 'registry-input';
+  getRegistryLocations().forEach((location) => {
+    const option = document.createElement('option');
+    option.value = location;
+    option.textContent = location === 'all' ? 'All locations' : location;
+    option.selected = location === registryState.location;
+    locationSelect.append(option);
+  });
+  locationSelect.addEventListener('change', () => {
+    registryState.location = locationSelect.value;
+    renderApp();
+  });
 
-  const structureCard = createCard(
-    'Architecture boundary',
-    'Packages hold reusable desktop primitives. App-specific workflows, like uploads, stay in the root app layer until they prove reusable.',
+  const availabilitySelect = document.createElement('select');
+  availabilitySelect.className = 'registry-input';
+  [
+    ['all', 'Any availability'],
+    ['open', 'Open to connect'],
+    ['limited', 'Limited availability'],
+    ['offline', 'Heads down'],
+  ].forEach(([value, label]) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    option.selected = value === registryState.availability;
+    availabilitySelect.append(option);
+  });
+  availabilitySelect.addEventListener('change', () => {
+    registryState.availability = availabilitySelect.value as RegistryAvailability | 'all';
+    renderApp();
+  });
+
+  const sortSelect = document.createElement('select');
+  sortSelect.className = 'registry-input';
+  [
+    ['relevance', 'Best match'],
+    ['activity', 'Most available'],
+    ['alphabetical', 'Alphabetical'],
+  ].forEach(([value, label]) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    option.selected = value === registryState.sort;
+    sortSelect.append(option);
+  });
+  sortSelect.addEventListener('change', () => {
+    registryState.sort = sortSelect.value as typeof registryState.sort;
+    renderApp();
+  });
+
+  controls.append(
+    createRegistryInputLabel('Search', searchInput),
+    createRegistryInputLabel('Location', locationSelect),
+    createRegistryInputLabel('Availability', availabilitySelect),
+    createRegistryInputLabel('Sort', sortSelect),
   );
 
-  const qualityCard = createCard(
-    'Build quality',
-    'The workspace now targets Node 24, builds package dist outputs, and is intended to run lint, build, unit, integration, and end-to-end checks in CI.',
+  controlPanel.append(formTitle, formBody, controls);
+
+  const statPanel = document.createElement('div');
+  statPanel.className = 'registry-panel registry-panel--stats';
+
+  const openCount = filteredUsers.filter((user) => user.availability === 'open').length;
+  const verifiedCount = filteredUsers.filter((user) => user.trustTier === 'Verified').length;
+  const skillCount = new Set(filteredUsers.flatMap((user) => user.skills)).size;
+
+  statPanel.append(
+    createRegistryStat('matching members', String(filteredUsers.length)),
+    createRegistryStat('open right now', String(openCount)),
+    createRegistryStat('verified profiles', String(verifiedCount)),
+    createRegistryStat('skills covered', String(skillCount)),
   );
 
-  grid.append(sharedPackageCard, featuresCard, structureCard, qualityCard);
-  screen.append(grid);
+  hero.append(controlPanel, statPanel);
+
+  const resultsLayout = document.createElement('section');
+  resultsLayout.className = 'registry-results-layout';
+
+  const resultsColumn = document.createElement('div');
+  resultsColumn.className = 'registry-results';
+
+  const resultsHeader = document.createElement('div');
+  resultsHeader.className = 'registry-results__header';
+
+  const resultsTitle = document.createElement('h2');
+  resultsTitle.textContent = filteredUsers.length === 1 ? '1 result' : `${filteredUsers.length} results`;
+
+  const resultsCopy = document.createElement('p');
+  resultsCopy.textContent =
+    selectedUser === null
+      ? 'Adjust the filters to widen the search.'
+      : `Top match: ${selectedUser.name} in ${selectedUser.location}.`;
+
+  resultsHeader.append(resultsTitle, resultsCopy);
+
+  const resultsList = document.createElement('div');
+  resultsList.className = 'registry-results__list';
+
+  if (filteredUsers.length === 0) {
+    const emptyState = document.createElement('article');
+    emptyState.className = 'registry-empty-state';
+
+    const emptyTitle = document.createElement('h3');
+    emptyTitle.textContent = 'No members matched this search';
+
+    const emptyBody = document.createElement('p');
+    emptyBody.textContent =
+      'Try a broader skill keyword, remove a location filter, or switch availability back to any.';
+
+    emptyState.append(emptyTitle, emptyBody);
+    resultsList.append(emptyState);
+  } else {
+    filteredUsers.forEach((user) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = user.id === registryState.selectedUserId ? 'registry-card is-selected' : 'registry-card';
+      card.addEventListener('click', () => {
+        registryState.selectedUserId = user.id;
+        renderApp();
+      });
+
+      const cardTop = document.createElement('div');
+      cardTop.className = 'registry-card__top';
+
+      const identity = document.createElement('div');
+      identity.className = 'registry-card__identity';
+
+      const name = document.createElement('strong');
+      name.textContent = user.name;
+
+      const role = document.createElement('span');
+      role.textContent = `${user.role} · ${user.handle}`;
+
+      identity.append(name, role);
+      cardTop.append(identity);
+
+      const status = document.createElement('span');
+      status.className = getAvailabilityClassName(user.availability);
+      status.textContent = getAvailabilityLabel(user.availability);
+      cardTop.append(status);
+
+      const bio = document.createElement('p');
+      bio.className = 'registry-card__bio';
+      bio.textContent = user.bio;
+
+      const meta = document.createElement('div');
+      meta.className = 'registry-card__meta';
+      [user.location, user.timezone, user.trustTier, `Responds ${user.responseTime}`].forEach((text) => {
+        meta.append(createRegistryPill(text));
+      });
+
+      const skills = document.createElement('div');
+      skills.className = 'registry-card__skills';
+      user.skills.slice(0, 3).forEach((skill) => {
+        skills.append(createRegistryPill(skill));
+      });
+
+      card.append(cardTop, bio, meta, skills);
+      resultsList.append(card);
+    });
+  }
+
+  resultsColumn.append(resultsHeader, resultsList);
+
+  const detailPanel = document.createElement('aside');
+  detailPanel.className = 'registry-detail';
+
+  if (!selectedUser) {
+    const emptyDetail = document.createElement('p');
+    emptyDetail.className = 'registry-panel__body';
+    emptyDetail.textContent = 'Pick a result to inspect the member profile.';
+    detailPanel.append(emptyDetail);
+  } else {
+    const detailHeader = document.createElement('div');
+    detailHeader.className = 'registry-detail__header';
+
+    const detailIdentity = document.createElement('div');
+
+    const detailName = document.createElement('h2');
+    detailName.textContent = selectedUser.name;
+
+    const detailRole = document.createElement('p');
+    detailRole.className = 'registry-panel__body';
+    detailRole.textContent = `${selectedUser.role} · ${selectedUser.handle}`;
+
+    detailIdentity.append(detailName, detailRole);
+
+    const detailStatus = document.createElement('span');
+    detailStatus.className = getAvailabilityClassName(selectedUser.availability);
+    detailStatus.textContent = getAvailabilityLabel(selectedUser.availability);
+
+    detailHeader.append(detailIdentity, detailStatus);
+
+    const detailBio = document.createElement('p');
+    detailBio.className = 'registry-detail__bio';
+    detailBio.textContent = selectedUser.bio;
+
+    const detailMeta = document.createElement('div');
+    detailMeta.className = 'registry-detail__meta';
+
+    [
+      ['Location', selectedUser.location],
+      ['Timezone', selectedUser.timezone],
+      ['Trust tier', selectedUser.trustTier],
+      ['Typical response', selectedUser.responseTime],
+      ['Last active', selectedUser.lastActive],
+    ].forEach(([label, value]) => {
+      const row = document.createElement('div');
+      row.className = 'registry-detail__row';
+
+      const rowLabel = document.createElement('span');
+      rowLabel.textContent = label;
+
+      const rowValue = document.createElement('strong');
+      rowValue.textContent = value;
+
+      row.append(rowLabel, rowValue);
+      detailMeta.append(row);
+    });
+
+    const skillsSection = document.createElement('div');
+    skillsSection.className = 'registry-detail__section';
+
+    const skillsTitle = document.createElement('h3');
+    skillsTitle.textContent = 'Skills';
+
+    const skillList = document.createElement('div');
+    skillList.className = 'registry-pill-row';
+    selectedUser.skills.forEach((skill) => {
+      skillList.append(createRegistryPill(skill));
+    });
+
+    skillsSection.append(skillsTitle, skillList);
+
+    const needsSection = document.createElement('div');
+    needsSection.className = 'registry-detail__section';
+
+    const needsTitle = document.createElement('h3');
+    needsTitle.textContent = 'Looking for';
+
+    const needsList = document.createElement('div');
+    needsList.className = 'registry-pill-row';
+    selectedUser.lookingFor.forEach((item) => {
+      needsList.append(createRegistryPill(item));
+    });
+
+    needsSection.append(needsTitle, needsList);
+
+    const actionBar = document.createElement('div');
+    actionBar.className = 'document-toolbar';
+    actionBar.append(
+      createUploadButton('Message member', () => {
+        window.alert(`Open a conversation with ${selectedUser.name}.`);
+      }, { primary: true }),
+      createUploadButton('Save shortlist', () => {
+        window.alert(`Saved ${selectedUser.name} to your shortlist.`);
+      }),
+    );
+
+    detailPanel.append(detailHeader, detailBio, detailMeta, skillsSection, needsSection, actionBar);
+  }
+
+  resultsLayout.append(resultsColumn, detailPanel);
+  screen.append(hero, resultsLayout);
 
   return screen;
 }
