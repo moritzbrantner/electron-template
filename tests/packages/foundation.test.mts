@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'bun:test';
@@ -10,6 +10,10 @@ import { createDocumentsService } from '../../packages/electron-documents/src/ma
 import { createJsonStore } from '../../packages/electron-json-store/src/main.ts';
 import { createPreferencesService } from '../../packages/electron-preferences/src/main.ts';
 import { createWindowStateManager } from '../../packages/electron-window-state/src/main.ts';
+import {
+  createDesktopPreferencesStore,
+  loadDesktopPreferencesForLaunch,
+} from '../../src/platform/main/desktop-preferences-store.ts';
 
 test('json store loads defaults, validates, migrates, and writes atomically', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'desktop-json-store-'));
@@ -96,6 +100,7 @@ test('preferences service supports get, set, reset, validation, and subscription
   const filePath = path.join(directory, 'preferences.json');
   const defaults = {
     appearance: { theme: 'system' as const },
+    display: { useGpu: true },
     developer: { openDevToolsOnLaunch: false },
     documents: { reopenLastDocument: false },
   };
@@ -108,6 +113,7 @@ test('preferences service supports get, set, reset, validation, and subscription
         value &&
           typeof value === 'object' &&
           typeof (value as typeof defaults).appearance?.theme === 'string' &&
+          typeof (value as typeof defaults).display?.useGpu === 'boolean' &&
           typeof (value as typeof defaults).developer?.openDevToolsOnLaunch === 'boolean' &&
           typeof (value as typeof defaults).documents?.reopenLastDocument === 'boolean',
       ),
@@ -130,6 +136,7 @@ test('preferences service supports get, set, reset, validation, and subscription
         value &&
           typeof value === 'object' &&
           typeof (value as typeof defaults).appearance?.theme === 'string' &&
+          typeof (value as typeof defaults).display?.useGpu === 'boolean' &&
           typeof (value as typeof defaults).developer?.openDevToolsOnLaunch === 'boolean' &&
           typeof (value as typeof defaults).documents?.reopenLastDocument === 'boolean',
       ),
@@ -145,6 +152,11 @@ test('preferences service supports get, set, reset, validation, and subscription
   assert.equal(updates.at(-1)?.appearance.theme, 'dark');
   assert.equal(broadcastCalls.at(-1)?.appearance.theme, 'dark');
 
+  await preferences.set('display', { useGpu: false });
+  assert.deepEqual(await preferences.get('display'), { useGpu: false });
+  assert.equal(updates.at(-1)?.display.useGpu, false);
+  assert.equal(broadcastCalls.at(-1)?.display.useGpu, false);
+
   await assert.rejects(
     async () => {
       await preferences.set('developer', { openDevToolsOnLaunch: 'yes' } as never);
@@ -154,6 +166,43 @@ test('preferences service supports get, set, reset, validation, and subscription
 
   const resetPreferences = await preferences.reset();
   assert.deepEqual(resetPreferences, defaults);
+  await rm(directory, { force: true, recursive: true });
+});
+
+test('desktop preferences store migrates display preferences for launch and runtime reads', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'desktop-launch-preferences-'));
+  const preferencesPath = path.join(directory, 'moritzbrantner', 'preferences.json');
+
+  await mkdir(path.dirname(preferencesPath), { recursive: true });
+
+  await writeFile(
+    preferencesPath,
+    JSON.stringify(
+      {
+        version: 1,
+        data: {
+          appearance: { theme: 'dark' },
+          developer: { openDevToolsOnLaunch: true },
+          documents: { reopenLastDocument: true },
+        },
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  );
+
+  const store = createDesktopPreferencesStore(directory);
+  const launchPreferences = loadDesktopPreferencesForLaunch(directory);
+
+  assert.deepEqual(launchPreferences.display, { useGpu: true });
+  assert.deepEqual(await store.load(), {
+    appearance: { theme: 'dark' },
+    display: { useGpu: true },
+    developer: { openDevToolsOnLaunch: true },
+    documents: { reopenLastDocument: true },
+  });
+
   await rm(directory, { force: true, recursive: true });
 });
 

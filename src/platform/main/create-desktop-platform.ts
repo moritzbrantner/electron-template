@@ -25,6 +25,7 @@ import {
   defaultUploadsState,
   isUploadsState,
 } from '../shared/uploads';
+import { createDesktopPreferencesStore } from './desktop-preferences-store';
 import { createUploadsService, type UploadDialogAdapter } from './create-uploads-service';
 
 interface StoredRecentDocumentsState {
@@ -189,15 +190,10 @@ function createUploadDialogAdapter(): UploadDialogAdapter {
 }
 
 export function createDesktopPlatform(resolveMainWindow: () => BrowserWindow | null) {
-  const storageRoot = path.join(app.getPath('userData'), 'moritzbrantner');
+  const userDataPath = app.getPath('userData');
+  const storageRoot = path.join(userDataPath, 'moritzbrantner');
   let didInstallMenuRefresh = false;
-  const preferencesStore = createJsonStore<DesktopPreferences>({
-    defaultValue: defaultDesktopPreferences,
-    filePath: getStoragePath('preferences.json'),
-    resetOnError: true,
-    validate: isDesktopPreferences,
-    version: 1,
-  });
+  const preferencesStore = createDesktopPreferencesStore(userDataPath);
   const recentDocumentsStore = createJsonStore<StoredRecentDocumentsState>({
     defaultValue: {
       items: [],

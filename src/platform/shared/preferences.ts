@@ -4,6 +4,9 @@ export interface DesktopPreferences {
   appearance: {
     theme: ThemePreference;
   };
+  display: {
+    useGpu: boolean;
+  };
   developer: {
     openDevToolsOnLaunch: boolean;
   };
@@ -15,6 +18,9 @@ export interface DesktopPreferences {
 export const defaultDesktopPreferences: DesktopPreferences = {
   appearance: {
     theme: 'system',
+  },
+  display: {
+    useGpu: true,
   },
   developer: {
     openDevToolsOnLaunch: false,
@@ -33,7 +39,12 @@ export function isDesktopPreferences(value: unknown): value is DesktopPreference
     return false;
   }
 
-  if (!isRecord(value.appearance) || !isRecord(value.developer) || !isRecord(value.documents)) {
+  if (
+    !isRecord(value.appearance) ||
+    !isRecord(value.display) ||
+    !isRecord(value.developer) ||
+    !isRecord(value.documents)
+  ) {
     return false;
   }
 
@@ -46,6 +57,7 @@ export function isDesktopPreferences(value: unknown): value is DesktopPreference
   }
 
   return (
+    typeof value.display.useGpu === 'boolean' &&
     typeof value.developer.openDevToolsOnLaunch === 'boolean' &&
     typeof value.documents.reopenLastDocument === 'boolean'
   );
