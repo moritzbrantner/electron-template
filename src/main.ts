@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
+import { loadDesktopPreferencesForLaunch } from './platform/main/desktop-preferences-store';
 import { createDesktopPlatform } from './platform/main/create-desktop-platform';
 
 if (process.env.PLAYWRIGHT_E2E_USER_DATA_DIR) {
@@ -11,6 +12,14 @@ if (process.env.PLAYWRIGHT_E2E_USER_DATA_DIR) {
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
+}
+
+if (!started) {
+  const launchPreferences = loadDesktopPreferencesForLaunch(app.getPath('userData'));
+
+  if (!launchPreferences.display.useGpu) {
+    app.disableHardwareAcceleration();
+  }
 }
 
 const rendererName =

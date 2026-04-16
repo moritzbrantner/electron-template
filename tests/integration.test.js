@@ -7,6 +7,8 @@ test('desktop main window hides the default menu bar', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '../src/main.ts'), 'utf8');
 
   assert.match(source, /autoHideMenuBar:\s*true/);
+  assert.match(source, /loadDesktopPreferencesForLaunch/);
+  assert.match(source, /app\.disableHardwareAcceleration\(\)/);
 });
 
 test('desktop main process composes the reusable platform layer', () => {

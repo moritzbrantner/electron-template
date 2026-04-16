@@ -229,6 +229,11 @@ body {
   line-height: 1.5;
 }
 
+.settings-note {
+  margin-top: 0.85rem;
+  font-size: 0.95rem;
+}
+
 .document-toolbar {
   margin-top: 1.5rem;
 }

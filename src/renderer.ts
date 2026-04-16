@@ -188,6 +188,34 @@ function createSettingsScreen() {
 
   appearanceCard.append(appearanceTitle, themeGroup);
 
+  const displayCard = document.createElement('article');
+  displayCard.className = 'overview-card';
+
+  const displayTitle = document.createElement('h2');
+  displayTitle.textContent = 'Display';
+
+  const gpuToggle = document.createElement('label');
+  gpuToggle.className = 'settings-checkbox';
+
+  const gpuCheckbox = document.createElement('input');
+  gpuCheckbox.type = 'checkbox';
+  gpuCheckbox.checked = appState.preferences.display.useGpu;
+  gpuCheckbox.addEventListener('change', () => {
+    void window.desktop.preferences.set('display', {
+      useGpu: gpuCheckbox.checked,
+    });
+  });
+
+  const gpuText = document.createElement('span');
+  gpuText.textContent = 'Use GPU acceleration';
+  gpuToggle.append(gpuCheckbox, gpuText);
+
+  const gpuNote = document.createElement('p');
+  gpuNote.className = 'settings-note';
+  gpuNote.textContent = 'Applies the next time the app launches.';
+
+  displayCard.append(displayTitle, gpuToggle, gpuNote);
+
   const developerCard = document.createElement('article');
   developerCard.className = 'overview-card';
 
@@ -234,7 +262,7 @@ function createSettingsScreen() {
   reopenToggle.append(reopenCheckbox, reopenText);
   documentsCard.append(documentsTitle, reopenToggle);
 
-  grid.append(appearanceCard, developerCard, documentsCard);
+  grid.append(appearanceCard, displayCard, developerCard, documentsCard);
   screen.append(grid);
 
   return screen;

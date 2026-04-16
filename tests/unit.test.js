@@ -19,6 +19,9 @@ test('desktop renderer uses the preload-backed desktop platform APIs', () => {
   assert.match(source, /System theme/);
   assert.match(source, /Light mode/);
   assert.match(source, /Dark mode/);
+  assert.match(source, /Display/);
+  assert.match(source, /Use GPU acceleration/);
+  assert.match(source, /Applies the next time the app launches\./);
   assert.match(source, /Persistent file intake/);
   assert.match(source, /Drop files here/);
   assert.match(source, /Upload queue/);
