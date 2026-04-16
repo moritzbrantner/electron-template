@@ -72,6 +72,12 @@ Run the quality gate locally:
 pnpm ci
 ```
 
+Verify that the repository still produces a packaged desktop app:
+
+```bash
+pnpm test:package
+```
+
 Package distributables:
 
 ```bash
