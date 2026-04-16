@@ -6,8 +6,14 @@ export const appManifest = {
   packageName: 'desktop',
   entryWorkspace: 'apps/desktop',
   releaseCadence: 'independent',
-  sharedPackages: ['@moritzbrantnerupload-playbook'],
-  featureFlags: ['library', 'uploads', 'react-query'],
+  sharedPackages: [
+    '@moritzbrantner/electron-commands',
+    '@moritzbrantner/electron-documents',
+    '@moritzbrantner/electron-json-store',
+    '@moritzbrantner/electron-preferences',
+    '@moritzbrantner/electron-window-state',
+  ],
+  featureFlags: ['desktop-template', 'documents', 'uploads'],
   deployment: {
     runtime: 'electron',
     entrypoint: '.vite/build/main.js',

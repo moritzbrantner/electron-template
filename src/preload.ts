@@ -5,9 +5,11 @@ import { createDocumentsBridge } from '@moritzbrantner/electron-documents/preloa
 import { createPreferencesBridge } from '@moritzbrantner/electron-preferences/preload';
 
 import type { DesktopPreferences } from './platform/shared/preferences';
+import { createUploadsBridge } from './platform/preload/uploads';
 
 contextBridge.exposeInMainWorld('desktop', {
   commands: createCommandsBridge(ipcRenderer),
   documents: createDocumentsBridge(ipcRenderer),
   preferences: createPreferencesBridge<DesktopPreferences>(ipcRenderer),
+  uploads: createUploadsBridge(ipcRenderer),
 });

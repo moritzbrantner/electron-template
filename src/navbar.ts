@@ -1,11 +1,4 @@
-export type AppRoute =
-  | 'home'
-  | 'settings'
-  | 'documents'
-  | 'three'
-  | 'react-hook-form'
-  | 'uploads'
-  | 'communication';
+export type AppRoute = 'home' | 'settings' | 'documents' | 'uploads';
 
 export function createNavbar(route: AppRoute): HTMLElement {
   const navbar = document.createElement('nav');
@@ -39,20 +32,6 @@ export function createNavbar(route: AppRoute): HTMLElement {
     documentsLink.className = 'is-active';
   }
 
-  const threeLink = document.createElement('a');
-  threeLink.href = '#/three';
-  threeLink.textContent = 'Three.js';
-  if (route === 'three') {
-    threeLink.className = 'is-active';
-  }
-
-  const reactHookFormLink = document.createElement('a');
-  reactHookFormLink.href = '#/react-hook-form';
-  reactHookFormLink.textContent = 'React Hook Form';
-  if (route === 'react-hook-form') {
-    reactHookFormLink.className = 'is-active';
-  }
-
   const uploadsLink = document.createElement('a');
   uploadsLink.href = '#/uploads';
   uploadsLink.textContent = 'Uploads';
@@ -60,22 +39,7 @@ export function createNavbar(route: AppRoute): HTMLElement {
     uploadsLink.className = 'is-active';
   }
 
-  const communicationLink = document.createElement('a');
-  communicationLink.href = '#/communication';
-  communicationLink.textContent = 'Communication';
-  if (route === 'communication') {
-    communicationLink.className = 'is-active';
-  }
-
-  actions.append(
-    homeLink,
-    settingsLink,
-    documentsLink,
-    threeLink,
-    reactHookFormLink,
-    uploadsLink,
-    communicationLink,
-  );
+  actions.append(homeLink, settingsLink, documentsLink, uploadsLink);
   navbar.append(brand, actions);
 
   return navbar;

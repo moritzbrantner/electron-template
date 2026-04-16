@@ -49,7 +49,7 @@ export interface DocumentDialogAdapter {
 export interface DocumentsServiceOptions {
   defaultContent?: string;
   dialogAdapter: DocumentDialogAdapter;
-  getBroadcastTargets: () => WebContents[];
+  getBroadcastTargets: (browserWindow: BrowserWindow | null) => WebContents[];
   initialFileName?: string;
   recentStore: JsonStore<StoredRecentDocumentsState>;
   serializer: DocumentSerializer;
@@ -74,16 +74,42 @@ function deriveDisplayName(filePathValue: string | null) {
 export function createDocumentsService(options: DocumentsServiceOptions) {
   const defaultContent = options.defaultContent ?? '';
   const initialFileName = options.initialFileName ?? `Untitled.${options.serializer.extension}`;
+  const sessionState = new Map<string, InternalDocumentState>();
 
-  let state: InternalDocumentState = {
-    content: defaultContent,
-    filePath: null,
-    lastSavedAt: null,
-    lastSavedContent: defaultContent,
-    statusMessage: 'Ready',
-  };
+  function createInitialState(): InternalDocumentState {
+    return {
+      content: defaultContent,
+      filePath: null,
+      lastSavedAt: null,
+      lastSavedContent: defaultContent,
+      statusMessage: 'Ready',
+    };
+  }
 
-  async function buildPublicState(): Promise<DocumentState> {
+  function getSessionKey(browserWindow: BrowserWindow | null) {
+    return typeof browserWindow?.id === 'number' ? `window:${browserWindow.id}` : 'window:default';
+  }
+
+  function getInternalState(browserWindow: BrowserWindow | null) {
+    const sessionKey = getSessionKey(browserWindow);
+    const existingState = sessionState.get(sessionKey);
+
+    if (existingState) {
+      return existingState;
+    }
+
+    const nextState = createInitialState();
+    sessionState.set(sessionKey, nextState);
+    return nextState;
+  }
+
+  function setInternalState(browserWindow: BrowserWindow | null, nextState: InternalDocumentState) {
+    sessionState.set(getSessionKey(browserWindow), nextState);
+    return nextState;
+  }
+
+  async function buildPublicState(browserWindow: BrowserWindow | null): Promise<DocumentState> {
+    const state = getInternalState(browserWindow);
     const recentDocuments = (await options.recentStore.load()).items;
 
     return {
@@ -97,10 +123,10 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
     };
   }
 
-  async function broadcast() {
-    const publicState = await buildPublicState();
+  async function broadcast(browserWindow: BrowserWindow | null) {
+    const publicState = await buildPublicState(browserWindow);
 
-    options.getBroadcastTargets().forEach((target) => {
+    options.getBroadcastTargets(browserWindow).forEach((target) => {
       if (!target.isDestroyed()) {
         target.send(documentsChannels.stateDidChange, cloneValue(publicState));
       }
@@ -125,25 +151,28 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
     });
   }
 
-  async function persistToPath(filePathValue: string) {
+  async function persistToPath(filePathValue: string, browserWindow: BrowserWindow | null) {
+    const state = getInternalState(browserWindow);
     const serialized = options.serializer.serialize({ content: state.content });
 
     await fs.mkdir(path.dirname(filePathValue), { recursive: true });
     await fs.writeFile(filePathValue, serialized, 'utf8');
 
-    state = {
+    setInternalState(browserWindow, {
       content: state.content,
       filePath: filePathValue,
       lastSavedAt: new Date().toISOString(),
       lastSavedContent: state.content,
       statusMessage: `Saved ${path.basename(filePathValue)}`,
-    };
+    });
 
     await rememberRecent(filePathValue);
-    await broadcast();
+    await broadcast(browserWindow);
   }
 
   async function maybeConfirmLosingChanges(browserWindow: BrowserWindow | null) {
+    const state = getInternalState(browserWindow);
+
     if (!browserWindow || state.content === state.lastSavedContent) {
       return true;
     }
@@ -151,44 +180,45 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
     const decision = await options.dialogAdapter.showUnsavedChangesDialog(browserWindow);
 
     if (decision === 'cancel') {
-      state = {
+      setInternalState(browserWindow, {
         ...state,
         statusMessage: 'Canceled',
-      };
-      await broadcast();
+      });
+      await broadcast(browserWindow);
       return false;
     }
 
     if (decision === 'save') {
       await save(browserWindow);
-      return state.content === state.lastSavedContent;
+      const currentState = getInternalState(browserWindow);
+      return currentState.content === currentState.lastSavedContent;
     }
 
     return true;
   }
 
-  async function loadFile(filePathValue: string) {
+  async function loadFile(filePathValue: string, browserWindow: BrowserWindow | null) {
     const raw = await fs.readFile(filePathValue, 'utf8');
     const loaded = options.serializer.deserialize(raw, filePathValue);
 
-    state = {
+    setInternalState(browserWindow, {
       content: loaded.content,
       filePath: filePathValue,
       lastSavedAt: new Date().toISOString(),
       lastSavedContent: loaded.content,
       statusMessage: `Opened ${path.basename(filePathValue)}`,
-    };
+    });
 
     await rememberRecent(filePathValue);
-    await broadcast();
+    await broadcast(browserWindow);
   }
 
-  async function getState() {
-    return buildPublicState();
+  async function getState(browserWindow: BrowserWindow | null = null) {
+    return buildPublicState(browserWindow);
   }
 
   async function listRecent() {
-    return (await buildPublicState()).recentDocuments;
+    return (await buildPublicState(null)).recentDocuments;
   }
 
   async function newDocument(browserWindow: BrowserWindow | null) {
@@ -198,14 +228,14 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
       return;
     }
 
-    state = {
+    setInternalState(browserWindow, {
       content: defaultContent,
       filePath: null,
       lastSavedAt: null,
       lastSavedContent: defaultContent,
       statusMessage: 'Started a new document',
-    };
-    await broadcast();
+    });
+    await broadcast(browserWindow);
   }
 
   async function open(browserWindow: BrowserWindow | null) {
@@ -222,15 +252,16 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
     const result = await options.dialogAdapter.showOpenDialog(browserWindow);
 
     if (result.canceled || result.filePaths.length === 0) {
-      state = {
+      const state = getInternalState(browserWindow);
+      setInternalState(browserWindow, {
         ...state,
         statusMessage: 'Open canceled',
-      };
-      await broadcast();
+      });
+      await broadcast(browserWindow);
       return;
     }
 
-    await loadFile(result.filePaths[0]);
+    await loadFile(result.filePaths[0], browserWindow);
   }
 
   async function openRecent(filePathValue: string, browserWindow: BrowserWindow | null) {
@@ -240,12 +271,14 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
       return;
     }
 
-    await loadFile(filePathValue);
+    await loadFile(filePathValue, browserWindow);
   }
 
   async function save(browserWindow: BrowserWindow | null) {
+    const state = getInternalState(browserWindow);
+
     if (state.filePath) {
-      await persistToPath(state.filePath);
+      await persistToPath(state.filePath, browserWindow);
       return;
     }
 
@@ -257,6 +290,7 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
       return;
     }
 
+    const state = getInternalState(browserWindow);
     const result = await options.dialogAdapter.showSaveDialog(
       browserWindow,
       state.filePath,
@@ -264,25 +298,28 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
     );
 
     if (result.canceled || !result.filePath) {
-      state = {
+      const state = getInternalState(browserWindow);
+      setInternalState(browserWindow, {
         ...state,
         statusMessage: 'Save canceled',
-      };
-      await broadcast();
+      });
+      await broadcast(browserWindow);
       return;
     }
 
-    await persistToPath(result.filePath);
+    await persistToPath(result.filePath, browserWindow);
   }
 
-  async function updateDraft(content: string) {
-    state = {
+  async function updateDraft(content: string, browserWindow: BrowserWindow | null = null) {
+    const state = getInternalState(browserWindow);
+
+    setInternalState(browserWindow, {
       ...state,
       content,
       statusMessage:
         content === state.lastSavedContent ? 'All changes saved' : 'Unsaved changes',
-    };
-    await broadcast();
+    });
+    await broadcast(browserWindow);
   }
 
   async function confirmBeforeClose(browserWindow: BrowserWindow) {
@@ -307,7 +344,9 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
   function installIpc(ipcMain: IpcMain) {
     const { BrowserWindow: ElectronBrowserWindow } = require('electron') as typeof import('electron');
 
-    ipcMain.handle(documentsChannels.getState, async () => getState());
+    ipcMain.handle(documentsChannels.getState, async (event) =>
+      getState(ElectronBrowserWindow.fromWebContents(event.sender)),
+    );
     ipcMain.handle(documentsChannels.listRecent, async () => listRecent());
     ipcMain.handle(documentsChannels.newDocument, async (event) => {
       await newDocument(ElectronBrowserWindow.fromWebContents(event.sender));
@@ -325,7 +364,7 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
       await saveAs(ElectronBrowserWindow.fromWebContents(event.sender));
     });
     ipcMain.handle(documentsChannels.updateDraft, async (_event, content: string) => {
-      await updateDraft(content);
+      await updateDraft(content, ElectronBrowserWindow.fromWebContents(_event.sender));
     });
 
     return () => {

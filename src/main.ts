@@ -4,6 +4,10 @@ import started from 'electron-squirrel-startup';
 
 import { createDesktopPlatform } from './platform/main/create-desktop-platform';
 
+if (process.env.PLAYWRIGHT_E2E_USER_DATA_DIR) {
+  app.setPath('userData', process.env.PLAYWRIGHT_E2E_USER_DATA_DIR);
+}
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();

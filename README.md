@@ -1,0 +1,86 @@
+# electron-template
+
+Reusable Electron desktop template with a typed main/preload boundary, publishable local packages, and app-level example workflows.
+
+## What is included
+
+- Reusable local packages for commands, documents, JSON persistence, preferences, and window state.
+- Electron Forge + Vite for development, packaging, and distributable builds.
+- A preload-safe renderer API exposed on `window.desktop`.
+- A complete upload exemplar that stays app-specific while using the shared persistence layer.
+- Unit, integration, and Playwright end-to-end coverage.
+
+## Repository layout
+
+- `src/main.ts`: Electron entrypoint and `BrowserWindow` lifecycle.
+- `src/preload.ts`: preload bridge that exposes the typed desktop APIs.
+- `src/renderer.ts`: renderer UI for the template example screens.
+- `src/platform/main`: app-specific main-process services and composition.
+- `src/platform/shared`: shared app-level types and validators.
+- `packages/*`: reusable Electron primitives intended for publishing.
+- `tests`: source-level unit and integration tests.
+- `e2e`: Playwright Electron tests and fixtures.
+
+## Architecture
+
+The shared packages provide reusable platform primitives:
+
+- `@moritzbrantner/electron-commands`
+- `@moritzbrantner/electron-documents`
+- `@moritzbrantner/electron-json-store`
+- `@moritzbrantner/electron-preferences`
+- `@moritzbrantner/electron-window-state`
+
+The app layer composes those packages in [create-desktop-platform.ts](/home/moenarch/moritzbrantner/electron-template/src/platform/main/create-desktop-platform.ts:163) and keeps product-specific behavior, like the upload queue, outside the reusable packages until it proves worth extracting.
+
+See [docs/architecture.md](/home/moenarch/moritzbrantner/electron-template/docs/architecture.md:1) for the package boundary rules.
+
+## Storage
+
+The template persists app state under `app.getPath('userData')/moritzbrantner/`:
+
+- `preferences.json`
+- `documents.json`
+- `window-state.json`
+- `uploads.json`
+
+Document files themselves are saved where the user chooses.
+
+## Commands
+
+Install dependencies:
+
+```bash
+pnpm install
+```
+
+Run the app in development:
+
+```bash
+pnpm dev
+```
+
+Build packages and the Electron app:
+
+```bash
+pnpm build
+```
+
+Run the quality gate locally:
+
+```bash
+pnpm ci
+```
+
+Package distributables:
+
+```bash
+pnpm make
+```
+
+## Extending the template
+
+- Add app-specific workflows under `src/platform/main` and `src/platform/shared` first.
+- Extract logic into `packages/*` only when it is generic enough to serve multiple apps.
+- Expose renderer-safe APIs only through preload bridges.
+- Prefer persisted typed state in the main process over renderer-owned local storage.

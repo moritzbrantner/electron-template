@@ -21,6 +21,11 @@ import {
   isDesktopPreferences,
   type DesktopPreferences,
 } from '../shared/preferences';
+import {
+  defaultUploadsState,
+  isUploadsState,
+} from '../shared/uploads';
+import { createUploadsService, type UploadDialogAdapter } from './create-uploads-service';
 
 interface StoredRecentDocumentsState {
   items: Array<{
@@ -160,8 +165,32 @@ function createDocumentDialogAdapter(storagePath: string): DocumentDialogAdapter
   };
 }
 
+function createUploadDialogAdapter(): UploadDialogAdapter {
+  const e2eUploadPath = path.join(app.getAppPath(), 'e2e', 'fixtures', 'upload-success.txt');
+
+  if (process.env.PLAYWRIGHT_E2E === '1') {
+    return {
+      async showOpenDialog() {
+        return {
+          canceled: false,
+          filePaths: [e2eUploadPath],
+        };
+      },
+    };
+  }
+
+  return {
+    showOpenDialog(browserWindow) {
+      return dialog.showOpenDialog(browserWindow, {
+        properties: ['multiSelections', 'openFile'],
+      });
+    },
+  };
+}
+
 export function createDesktopPlatform(resolveMainWindow: () => BrowserWindow | null) {
   const storageRoot = path.join(app.getPath('userData'), 'moritzbrantner');
+  let didInstallMenuRefresh = false;
   const preferencesStore = createJsonStore<DesktopPreferences>({
     defaultValue: defaultDesktopPreferences,
     filePath: getStoragePath('preferences.json'),
@@ -186,6 +215,13 @@ export function createDesktopPlatform(resolveMainWindow: () => BrowserWindow | n
     validate: isStoredWindowStateMap,
     version: 1,
   });
+  const uploadsStore = createJsonStore({
+    defaultValue: defaultUploadsState,
+    filePath: getStoragePath('uploads.json'),
+    resetOnError: true,
+    validate: isUploadsState,
+    version: 1,
+  });
 
   const preferences = createPreferencesService<DesktopPreferences>({
     defaultValue: defaultDesktopPreferences,
@@ -198,11 +234,17 @@ export function createDesktopPlatform(resolveMainWindow: () => BrowserWindow | n
   const documents = createDocumentsService({
     defaultContent: 'Write here. Save with CmdOrCtrl+S and reopen from the recent files list.',
     dialogAdapter: createDocumentDialogAdapter(storageRoot),
-    getBroadcastTargets: () =>
-      BrowserWindow.getAllWindows().map((browserWindow) => browserWindow.webContents),
+    getBroadcastTargets: (browserWindow) =>
+      browserWindow ? [browserWindow.webContents] : [],
     initialFileName: 'Untitled.desktop.json',
     recentStore: recentDocumentsStore,
     serializer: desktopDocumentSerializer,
+  });
+  const uploads = createUploadsService({
+    dialogAdapter: createUploadDialogAdapter(),
+    getBroadcastTargets: () =>
+      BrowserWindow.getAllWindows().map((browserWindow) => browserWindow.webContents),
+    store: uploadsStore,
   });
 
   const commandDefinitions: CommandDefinition[] = [
@@ -268,6 +310,7 @@ export function createDesktopPlatform(resolveMainWindow: () => BrowserWindow | n
   preferences.installIpc(ipcMain);
   commands.installIpc(ipcMain);
   documents.installIpc(ipcMain);
+  uploads.installIpc(ipcMain);
 
   function installMenu() {
     const template = [
@@ -321,7 +364,16 @@ export function createDesktopPlatform(resolveMainWindow: () => BrowserWindow | n
       },
     ];
 
-    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+    const applicationMenu = Menu.buildFromTemplate(template);
+    commands.applyMenuState(applicationMenu);
+    Menu.setApplicationMenu(applicationMenu);
+
+    if (!didInstallMenuRefresh) {
+      app.on('browser-window-focus', (_event, browserWindow) => {
+        commands.refreshApplicationMenu(browserWindow);
+      });
+      didInstallMenuRefresh = true;
+    }
   }
 
   async function maybeReopenLastDocument(browserWindow: BrowserWindow) {
@@ -354,6 +406,7 @@ export function createDesktopPlatform(resolveMainWindow: () => BrowserWindow | n
     maybeReopenLastDocument,
     preferences,
     shouldOpenDevToolsOnLaunch,
+    uploads,
     windowState,
   };
 }
