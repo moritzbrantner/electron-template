@@ -12,6 +12,11 @@ export default defineConfig({
       input: path.resolve(__dirname, 'index.html'),
     },
   },
+  server: {
+    fs: {
+      allow: [path.resolve(__dirname, '../platform-packages/packages/maps')],
+    },
+  },
   resolve: {
     alias: packageAliases,
   },
