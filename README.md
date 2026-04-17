@@ -36,6 +36,7 @@ The app layer composes those packages in [create-desktop-platform.ts](/home/moen
 The standalone repo contract lives in [app.manifest.ts](/home/moenarch/moritzbrantner/electron-template/app.manifest.ts:1). It defines repo-level metadata such as `entryWorkspace`, deployment runtime, and the real shared package set. It does not imply an upstream sync relationship.
 
 See [docs/architecture.md](/home/moenarch/moritzbrantner/electron-template/docs/architecture.md:1) for the package boundary rules.
+See [SCAFFOLD_ALIGNMENT.md](./SCAFFOLD_ALIGNMENT.md) for the scaffold-family alignment contract.
 
 ## Storage
 
