@@ -1,0 +1,12 @@
+{
+  "name": "@moritzbrantner/biome-config-react",
+  "version": "0.1.0",
+  "type": "module",
+  "files": [
+    "react.json",
+    "README.md"
+  ],
+  "exports": {
+    "./biome": "./react.json"
+  }
+}

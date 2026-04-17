@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["@moritzbrantner/biome-config-react/biome"],
+  "files": {
+    "includes": [
+      "**",
+      "!coverage",
+      "!out",
+      "!playwright-report",
+      "!**/.vite",
+      "!**/dist"
+    ]
+  }
+}
