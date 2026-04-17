@@ -97,7 +97,7 @@ async function navigateToHash(browserWindow: BrowserWindow | null, hash: string)
 }
 
 function createDocumentDialogAdapter(storagePath: string): DocumentDialogAdapter {
-  const e2eDocumentPath = path.join(storagePath, 'e2e-document.desktop.json');
+  const e2eDocumentPath = path.join(storagePath, 'e2e-document.md');
 
   if (process.env.PLAYWRIGHT_E2E === '1') {
     return {
@@ -124,8 +124,8 @@ function createDocumentDialogAdapter(storagePath: string): DocumentDialogAdapter
       return dialog.showOpenDialog(browserWindow, {
         filters: [
           {
-            extensions: ['desktop.json', 'json'],
-            name: 'Desktop documents',
+            extensions: ['md', 'markdown'],
+            name: 'Markdown documents',
           },
         ],
         properties: ['openFile'],
@@ -136,8 +136,8 @@ function createDocumentDialogAdapter(storagePath: string): DocumentDialogAdapter
         defaultPath: currentFilePath ?? path.join(app.getPath('documents'), suggestedFileName),
         filters: [
           {
-            extensions: ['desktop.json'],
-            name: 'Desktop documents',
+            extensions: ['md', 'markdown'],
+            name: 'Markdown documents',
           },
         ],
       });
@@ -228,11 +228,12 @@ export function createDesktopPlatform(resolveMainWindow: () => BrowserWindow | n
   });
 
   const documents = createDocumentsService({
-    defaultContent: 'Write here. Save with CmdOrCtrl+S and reopen from the recent files list.',
+    defaultContent:
+      '# Untitled document\n\nStart writing in Markdown.\n\n- Add headings, lists, and links\n- Save with CmdOrCtrl+S\n- Reopen from the recent files list',
     dialogAdapter: createDocumentDialogAdapter(storageRoot),
     getBroadcastTargets: (browserWindow) =>
       browserWindow ? [browserWindow.webContents] : [],
-    initialFileName: 'Untitled.desktop.json',
+    initialFileName: 'Untitled.md',
     recentStore: recentDocumentsStore,
     serializer: desktopDocumentSerializer,
   });

@@ -343,8 +343,8 @@ test('commands service rejects duplicates and disabled commands', async () => {
 
 test('documents service supports save, save as, open recent, dirty state, and cancelation', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'desktop-documents-'));
-  const documentFilePath = path.join(directory, 'note.desktop.json');
-  const recentFilePath = path.join(directory, 'second.desktop.json');
+  const documentFilePath = path.join(directory, 'note.md');
+  const recentFilePath = path.join(directory, 'second.md');
   const recentStore = createJsonStore({
     defaultValue: {
       items: [],
@@ -379,13 +379,12 @@ test('documents service supports save, save as, open recent, dirty state, and ca
     recentStore,
     serializer: {
       deserialize(raw: string) {
-        const parsed = JSON.parse(raw) as { content: string };
-        return { content: parsed.content };
+        return { content: raw };
       },
-      extension: 'desktop.json',
-      name: 'Desktop',
+      extension: 'md',
+      name: 'Markdown',
       serialize(value) {
-        return JSON.stringify({ content: value.content });
+        return value.content;
       },
     },
   });
@@ -402,9 +401,9 @@ test('documents service supports save, save as, open recent, dirty state, and ca
 
   await service.updateDraft('hello again');
   await service.save({} as never);
-  assert.equal(JSON.parse(await readFile(documentFilePath, 'utf8')).content, 'hello again');
+  assert.equal(await readFile(documentFilePath, 'utf8'), 'hello again');
 
-  await writeFile(recentFilePath, JSON.stringify({ content: 'from recent' }), 'utf8');
+  await writeFile(recentFilePath, 'from recent', 'utf8');
   await service.openRecent(recentFilePath, {} as never);
   assert.equal((await service.getState()).content, 'from recent');
   assert.equal((await service.listRecent()).length, 2);
@@ -426,13 +425,12 @@ test('documents service supports save, save as, open recent, dirty state, and ca
     recentStore,
     serializer: {
       deserialize(raw: string) {
-        const parsed = JSON.parse(raw) as { content: string };
-        return { content: parsed.content };
+        return { content: raw };
       },
-      extension: 'desktop.json',
-      name: 'Desktop',
+      extension: 'md',
+      name: 'Markdown',
       serialize(value) {
-        return JSON.stringify({ content: value.content });
+        return value.content;
       },
     },
   });
@@ -448,13 +446,12 @@ test('documents service supports save, save as, open recent, dirty state, and ca
     recentStore,
     serializer: {
       deserialize(raw: string) {
-        const parsed = JSON.parse(raw) as { content: string };
-        return { content: parsed.content };
+        return { content: raw };
       },
-      extension: 'desktop.json',
-      name: 'Desktop',
+      extension: 'md',
+      name: 'Markdown',
       serialize(value) {
-        return JSON.stringify({ content: value.content });
+        return value.content;
       },
     },
   });

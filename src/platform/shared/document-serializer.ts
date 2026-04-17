@@ -1,24 +1,22 @@
 import type { DocumentSerializer } from '@moritzbrantner/electron-documents/main';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === 'object');
-}
-
 export const desktopDocumentSerializer: DocumentSerializer = {
   deserialize(raw: string, filePath: string) {
-    const parsed = JSON.parse(raw) as unknown;
-
-    if (!isRecord(parsed) || typeof parsed.content !== 'string') {
-      throw new Error(`Invalid document payload in ${filePath}`);
+    if (typeof raw !== 'string') {
+      throw new Error(`Invalid markdown payload in ${filePath}`);
     }
 
     return {
-      content: parsed.content,
+      content: raw.replaceAll('\r\n', '\n'),
     };
   },
-  extension: 'desktop.json',
-  name: 'Desktop scratch document',
+  extension: 'md',
+  name: 'Markdown document',
   serialize(value) {
-    return `${JSON.stringify({ content: value.content, version: 1 }, null, 2)}\n`;
+    if (value.content.length === 0) {
+      return '';
+    }
+
+    return value.content.endsWith('\n') ? value.content : `${value.content}\n`;
   },
 };

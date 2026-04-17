@@ -18,6 +18,8 @@ test('desktop renderer uses the preload-backed desktop platform APIs', () => {
   assert.match(source, /Reset navigation hotkeys/);
   assert.match(source, /Each page shortcut must be unique\./);
   assert.match(source, /Built-in document shortcuts stay global/);
+  assert.match(source, /Markdown editor/);
+  assert.match(source, /renderMarkdownPreview/);
   assert.match(source, /hotkey-kbd/);
   assert.match(source, /route === 'documents'/);
   assert.match(source, /route === 'uploads'/);

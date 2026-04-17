@@ -42,6 +42,315 @@ const appState = {
   uploads: defaultUploadsState,
 };
 
+interface DocumentEditorSnapshot {
+  hadFocus: boolean;
+  scrollTop: number;
+  selectionEnd: number | null;
+  selectionStart: number | null;
+}
+
+function countWords(text: string) {
+  const trimmed = text.trim();
+
+  if (trimmed.length === 0) {
+    return 0;
+  }
+
+  return trimmed.split(/\s+/).length;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+function sanitizeMarkdownHref(href: string) {
+  const trimmedHref = href.trim();
+
+  if (!/^(https?:\/\/|mailto:)/iu.test(trimmedHref)) {
+    return null;
+  }
+
+  return escapeHtml(trimmedHref);
+}
+
+function renderInlineMarkdown(text: string) {
+  const codeTokens: string[] = [];
+
+  let html = escapeHtml(text).replace(/`([^`\n]+)`/gu, (_match, code: string) => {
+    const token = `__CODE_TOKEN_${codeTokens.length}__`;
+    codeTokens.push(`<code>${code}</code>`);
+    return token;
+  });
+
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/gu, (_match, label: string, href: string) => {
+    const safeHref = sanitizeMarkdownHref(href);
+
+    if (!safeHref) {
+      return label;
+    }
+
+    return `<a href="${safeHref}" target="_blank" rel="noreferrer">${label}</a>`;
+  });
+
+  html = html
+    .replace(/\*\*([^*]+)\*\*/gu, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/gu, '$1<em>$2</em>')
+    .replace(/~~([^~]+)~~/gu, '<del>$1</del>');
+
+  codeTokens.forEach((token, index) => {
+    html = html.replace(`__CODE_TOKEN_${index}__`, token);
+  });
+
+  return html;
+}
+
+function isParagraphBoundary(line: string) {
+  return (
+    line.trim().length === 0 ||
+    /^(#{1,6})\s+/u.test(line) ||
+    /^>\s?/u.test(line) ||
+    /^([-*+])\s+/u.test(line) ||
+    /^\d+\.\s+/u.test(line) ||
+    /^```/u.test(line) ||
+    /^([-*_]){3,}\s*$/u.test(line.trim())
+  );
+}
+
+function renderMarkdownPreview(markdown: string) {
+  const normalizedMarkdown = markdown.replaceAll('\r\n', '\n');
+  const lines = normalizedMarkdown.split('\n');
+  const html: string[] = [];
+
+  for (let index = 0; index < lines.length; ) {
+    const line = lines[index];
+    const trimmedLine = line.trim();
+
+    if (trimmedLine.length === 0) {
+      index += 1;
+      continue;
+    }
+
+    if (line.startsWith('```')) {
+      const language = line.slice(3).trim();
+      const codeLines: string[] = [];
+      index += 1;
+
+      while (index < lines.length && !lines[index].startsWith('```')) {
+        codeLines.push(lines[index]);
+        index += 1;
+      }
+
+      if (index < lines.length) {
+        index += 1;
+      }
+
+      html.push(
+        `<pre class="markdown-code-block"${language ? ` data-language="${escapeHtml(language)}"` : ''}><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`,
+      );
+      continue;
+    }
+
+    const headingMatch = line.match(/^(#{1,6})\s+(.*)$/u);
+
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      html.push(`<h${level}>${renderInlineMarkdown(headingMatch[2].trim())}</h${level}>`);
+      index += 1;
+      continue;
+    }
+
+    if (/^([-*_]){3,}\s*$/u.test(trimmedLine)) {
+      html.push('<hr />');
+      index += 1;
+      continue;
+    }
+
+    if (/^>\s?/u.test(line)) {
+      const quoteLines: string[] = [];
+
+      while (index < lines.length && /^>\s?/u.test(lines[index])) {
+        quoteLines.push(lines[index].replace(/^>\s?/u, ''));
+        index += 1;
+      }
+
+      html.push(
+        `<blockquote><p>${quoteLines.map((quoteLine) => renderInlineMarkdown(quoteLine)).join('<br />')}</p></blockquote>`,
+      );
+      continue;
+    }
+
+    const unorderedListMatch = line.match(/^([-*+])\s+(.*)$/u);
+
+    if (unorderedListMatch) {
+      const items: string[] = [];
+
+      while (index < lines.length) {
+        const match = lines[index].match(/^([-*+])\s+(.*)$/u);
+
+        if (!match) {
+          break;
+        }
+
+        items.push(`<li>${renderInlineMarkdown(match[2].trim())}</li>`);
+        index += 1;
+      }
+
+      html.push(`<ul>${items.join('')}</ul>`);
+      continue;
+    }
+
+    const orderedListMatch = line.match(/^\d+\.\s+(.*)$/u);
+
+    if (orderedListMatch) {
+      const items: string[] = [];
+
+      while (index < lines.length) {
+        const match = lines[index].match(/^\d+\.\s+(.*)$/u);
+
+        if (!match) {
+          break;
+        }
+
+        items.push(`<li>${renderInlineMarkdown(match[1].trim())}</li>`);
+        index += 1;
+      }
+
+      html.push(`<ol>${items.join('')}</ol>`);
+      continue;
+    }
+
+    const paragraphLines = [trimmedLine];
+    index += 1;
+
+    while (index < lines.length && !isParagraphBoundary(lines[index])) {
+      paragraphLines.push(lines[index].trim());
+      index += 1;
+    }
+
+    html.push(`<p>${renderInlineMarkdown(paragraphLines.join(' '))}</p>`);
+  }
+
+  if (html.length === 0) {
+    return '<p class="document-preview__empty">Start typing to preview your markdown document.</p>';
+  }
+
+  return html.join('');
+}
+
+function updateDocumentEditorValue(
+  editor: HTMLTextAreaElement,
+  nextValue: string,
+  selectionStart: number,
+  selectionEnd: number,
+) {
+  editor.value = nextValue;
+  editor.focus({ preventScroll: true });
+  editor.setSelectionRange(selectionStart, selectionEnd);
+  void window.desktop.documents.updateDraft(nextValue);
+}
+
+function wrapMarkdownSelection(
+  editor: HTMLTextAreaElement,
+  prefix: string,
+  suffix: string,
+  fallbackText: string,
+) {
+  const selectionStart = editor.selectionStart;
+  const selectionEnd = editor.selectionEnd;
+  const selectedText = editor.value.slice(selectionStart, selectionEnd) || fallbackText;
+  const nextValue =
+    editor.value.slice(0, selectionStart) +
+    prefix +
+    selectedText +
+    suffix +
+    editor.value.slice(selectionEnd);
+
+  updateDocumentEditorValue(
+    editor,
+    nextValue,
+    selectionStart + prefix.length,
+    selectionStart + prefix.length + selectedText.length,
+  );
+}
+
+function prefixMarkdownSelection(
+  editor: HTMLTextAreaElement,
+  prefix: string,
+  fallbackText: string,
+) {
+  const selectionStart = editor.selectionStart;
+  const selectionEnd = editor.selectionEnd;
+  const selectedText = editor.value.slice(selectionStart, selectionEnd) || fallbackText;
+  const nextText = selectedText
+    .split('\n')
+    .map((line) => `${prefix}${line}`)
+    .join('\n');
+  const nextValue =
+    editor.value.slice(0, selectionStart) + nextText + editor.value.slice(selectionEnd);
+
+  updateDocumentEditorValue(
+    editor,
+    nextValue,
+    selectionStart,
+    selectionStart + nextText.length,
+  );
+}
+
+function insertMarkdownLink(editor: HTMLTextAreaElement) {
+  const selectionStart = editor.selectionStart;
+  const selectionEnd = editor.selectionEnd;
+  const selectedText = editor.value.slice(selectionStart, selectionEnd) || 'link text';
+  const linkText = `[${selectedText}](https://example.com)`;
+  const nextValue =
+    editor.value.slice(0, selectionStart) + linkText + editor.value.slice(selectionEnd);
+  const urlStart = selectionStart + selectedText.length + 3;
+  const urlEnd = urlStart + 'https://example.com'.length;
+
+  updateDocumentEditorValue(editor, nextValue, urlStart, urlEnd);
+}
+
+function captureDocumentEditorSnapshot(): DocumentEditorSnapshot | null {
+  const editor = document.querySelector<HTMLTextAreaElement>('textarea.document-editor');
+
+  if (!editor) {
+    return null;
+  }
+
+  return {
+    hadFocus: document.activeElement === editor,
+    scrollTop: editor.scrollTop,
+    selectionEnd: editor.selectionEnd,
+    selectionStart: editor.selectionStart,
+  };
+}
+
+function restoreDocumentEditorSnapshot(snapshot: DocumentEditorSnapshot | null) {
+  if (!snapshot?.hadFocus) {
+    return;
+  }
+
+  const editor = document.querySelector<HTMLTextAreaElement>('textarea.document-editor');
+
+  if (!editor) {
+    return;
+  }
+
+  editor.focus({ preventScroll: true });
+
+  if (
+    typeof snapshot.selectionStart === 'number' &&
+    typeof snapshot.selectionEnd === 'number'
+  ) {
+    editor.setSelectionRange(snapshot.selectionStart, snapshot.selectionEnd);
+  }
+
+  editor.scrollTop = snapshot.scrollTop;
+}
+
 function applyTheme(preferences: DesktopPreferences) {
   const theme = resolveThemePreference(preferences.appearance.theme, systemThemeQuery.matches);
   document.documentElement.dataset.theme = theme;
@@ -232,7 +541,7 @@ function createHomeScreen() {
 
   [
     'Preferences persist through a typed preload-safe store.',
-    'Documents support save, save as, reopen recent, and dirty state.',
+    'Documents support markdown editing, save/open flows, recent files, and dirty state.',
     'Uploads support queueing, retry, cancelation, persistence, and restart recovery.',
     'Commands flow through a reusable registry with menu-state refresh hooks.',
   ].forEach((text) => {
@@ -523,9 +832,9 @@ function createMetaLine(text: string) {
 
 function createDocumentsScreen() {
   const screen = createScreenFrame(
-    'Save and load',
+    'Write in markdown',
     'Documents',
-    'This route is backed by reusable document workflow packages and session-scoped renderer state.',
+    'Create markdown notes with a live preview, reusable save/open commands, and recent-file history.',
   );
 
   const toolbar = document.createElement('div');
@@ -549,6 +858,10 @@ function createDocumentsScreen() {
     toolbar.append(button);
   });
 
+  const content = appState.documents.content;
+  const wordCount = countWords(content);
+  const characterCount = content.length;
+
   const summary = document.createElement('div');
   summary.className = 'document-summary';
 
@@ -563,11 +876,37 @@ function createDocumentsScreen() {
   nameLine.textContent = appState.documents.displayName;
   meta.append(
     nameLine,
-    createMetaLine(appState.documents.filePath ?? 'No file path yet'),
+    createMetaLine(appState.documents.filePath ?? 'Not saved yet'),
     createMetaLine(appState.documents.statusMessage),
+    createMetaLine(
+      appState.documents.lastSavedAt
+        ? `Last saved ${new Date(appState.documents.lastSavedAt).toLocaleString()}`
+        : 'No saved version yet',
+    ),
   );
 
-  summary.append(statusBadge, meta);
+  const stats = document.createElement('div');
+  stats.className = 'document-stats';
+
+  [
+    { label: 'Words', value: wordCount.toLocaleString() },
+    { label: 'Characters', value: characterCount.toLocaleString() },
+    { label: 'Lines', value: content.length === 0 ? '0' : content.split('\n').length.toLocaleString() },
+  ].forEach((item) => {
+    const stat = document.createElement('div');
+    stat.className = 'document-stat';
+
+    const value = document.createElement('strong');
+    value.textContent = item.value;
+
+    const label = document.createElement('span');
+    label.textContent = item.label;
+
+    stat.append(value, label);
+    stats.append(stat);
+  });
+
+  summary.append(statusBadge, meta, stats);
 
   const layout = document.createElement('div');
   layout.className = 'document-layout';
@@ -575,19 +914,99 @@ function createDocumentsScreen() {
   const editorCard = document.createElement('article');
   editorCard.className = 'overview-card';
 
+  const editorHeader = document.createElement('div');
+  editorHeader.className = 'document-card-header';
+
   const editorLabel = document.createElement('label');
   editorLabel.className = 'document-editor-label';
-  editorLabel.textContent = 'Current document';
+  editorLabel.textContent = 'Markdown editor';
+
+  const editorHint = document.createElement('p');
+  editorHint.className = 'document-helper-text';
+  editorHint.textContent = 'Use the formatting buttons or write markdown directly. Save to a real `.md` file.';
+
+  editorHeader.append(editorLabel, editorHint);
+
+  const formattingTools = document.createElement('div');
+  formattingTools.className = 'markdown-tools';
 
   const editor = document.createElement('textarea');
   editor.className = 'document-editor';
-  editor.value = appState.documents.content;
-  editor.placeholder = 'Write something, then save it to a .desktop.json file.';
+  editor.value = content;
+  editor.placeholder = '# Untitled document\n\nStart writing your markdown here.';
   editor.addEventListener('input', () => {
     void window.desktop.documents.updateDraft(editor.value);
   });
 
-  editorCard.append(editorLabel, editor);
+  [
+    {
+      label: 'H1',
+      run: () => {
+        prefixMarkdownSelection(editor, '# ', 'Heading');
+      },
+    },
+    {
+      label: 'Bold',
+      run: () => {
+        wrapMarkdownSelection(editor, '**', '**', 'bold text');
+      },
+    },
+    {
+      label: 'Italic',
+      run: () => {
+        wrapMarkdownSelection(editor, '*', '*', 'emphasis');
+      },
+    },
+    {
+      label: 'List',
+      run: () => {
+        prefixMarkdownSelection(editor, '- ', 'List item');
+      },
+    },
+    {
+      label: 'Quote',
+      run: () => {
+        prefixMarkdownSelection(editor, '> ', 'Quoted text');
+      },
+    },
+    {
+      label: 'Code',
+      run: () => {
+        wrapMarkdownSelection(editor, '```\n', '\n```', 'code block');
+      },
+    },
+    {
+      label: 'Link',
+      run: () => {
+        insertMarkdownLink(editor);
+      },
+    },
+  ].forEach((tool) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'markdown-tool';
+    button.textContent = tool.label;
+    button.addEventListener('click', tool.run);
+    formattingTools.append(button);
+  });
+
+  editorCard.append(editorHeader, formattingTools, editor);
+
+  const sidebar = document.createElement('div');
+  sidebar.className = 'document-sidebar';
+
+  const previewCard = document.createElement('article');
+  previewCard.className = 'overview-card';
+
+  const previewTitle = document.createElement('h2');
+  previewTitle.className = 'document-section-title';
+  previewTitle.textContent = 'Preview';
+
+  const preview = document.createElement('div');
+  preview.className = 'document-preview';
+  preview.innerHTML = renderMarkdownPreview(content);
+
+  previewCard.append(previewTitle, preview);
 
   const recentCard = document.createElement('article');
   recentCard.className = 'overview-card';
@@ -624,7 +1043,8 @@ function createDocumentsScreen() {
   }
 
   recentCard.append(recentTitle, recentList);
-  layout.append(editorCard, recentCard);
+  sidebar.append(previewCard, recentCard);
+  layout.append(editorCard, sidebar);
   screen.append(toolbar, summary, layout);
 
   return screen;
@@ -943,6 +1363,7 @@ function renderApp() {
   }
 
   const route = getCurrentRoute();
+  const documentEditorSnapshot = route === 'documents' ? captureDocumentEditorSnapshot() : null;
   app.innerHTML = '';
   app.append(createNavbar(route, appState.preferences.hotkeys.navigation));
 
@@ -958,6 +1379,7 @@ function renderApp() {
 
   if (route === 'documents') {
     app.append(createDocumentsScreen());
+    restoreDocumentEditorSnapshot(documentEditorSnapshot);
     return;
   }
 
