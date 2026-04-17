@@ -4,7 +4,7 @@ export const appManifest = {
   displayName: 'Desktop',
   platform: 'desktop',
   packageName: 'desktop',
-  entryWorkspace: 'apps/desktop',
+  entryWorkspace: '.',
   releaseCadence: 'independent',
   sharedPackages: [
     '@moritzbrantner/electron-commands',
@@ -12,6 +12,8 @@ export const appManifest = {
     '@moritzbrantner/electron-json-store',
     '@moritzbrantner/electron-preferences',
     '@moritzbrantner/electron-window-state',
+    '@moritzbrantner/maps',
+    '@moritzbrantner/ui',
   ],
   featureFlags: ['desktop-template', 'documents', 'uploads'],
   deployment: {

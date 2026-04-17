@@ -6,6 +6,8 @@ import electronPath from 'electron';
 
 import { test } from './fixtures/electron';
 
+// Desktop smoke coverage keeps the scaffold contract focused on renderer, settings,
+// document, and upload flows instead of example-only behavior.
 const shortcutKey = process.platform === 'darwin' ? 'Meta' : 'Control';
 const defaultHomeHotkey = 'CmdOrCtrl+1';
 const defaultDocumentsHotkey = 'CmdOrCtrl+3';
