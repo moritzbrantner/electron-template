@@ -11,51 +11,16 @@ permissions:
 
 jobs:
   quality:
-    timeout-minutes: 60
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: .bun-version
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
-
-      - name: Lint
-        run: bun run lint
-
-      - name: Build
-        run: bun run build
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
-
-      - name: Run unit tests
-        run: bun run test:unit
-
-      - name: Run integration tests
-        run: bun run test:integration
-
-      - name: Verify packaged app
-        run: bun run test:package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
-
-      - name: Install Playwright Browsers
-        run: bunx --bun playwright install --with-deps
-
-      - name: Run end-to-end tests
-        run: bun run test:e2e
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
-
-      - uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 30
+    permissions:
+      contents: read
+      packages: read
+    uses: moritzbrantner/reusable-workflows/.github/workflows/validate-repo.yml@scaffold-v2-initial
+    with:
+      install_command: bun install --frozen-lockfile
+      lint_command: bun run lint
+      test_command: bun run test:unit && bun run test:integration && bun run test:package
+      build_command: bun run build
+      e2e_command: bun run test:e2e
+      install_playwright: true
+    secrets:
+      node_auth_token: ${{ secrets.GH_PACKAGES_TOKEN }}

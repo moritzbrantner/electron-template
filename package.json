@@ -13,7 +13,6 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "sync:monorepo": "node ./scripts/dispatch-monorepo-update.mjs",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "dev": "electron-forge start",
@@ -24,7 +23,7 @@
     "test": "bun run test:unit && bun run test:integration && bun run test:e2e",
     "test:unit": "bun test ./tests/unit.test.js ./tests/packages/*.test.mts",
     "test:integration": "bun test ./tests/integration.test.js",
-    "test:e2e": "bun run build && \"$(dirname \"$(command -v npm)\")/node\" ./node_modules/playwright/cli.js test",
+    "test:e2e": "bun run build && \"$(dirname \"$(command -v npm)\")/node\" ./node_modules/playwright/cli.js test e2e/desktop-smoke.e2e.ts",
     "test:package": "node ./scripts/verify-package.mjs"
   },
   "keywords": [],

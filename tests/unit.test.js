@@ -52,3 +52,31 @@ test('desktop navbar component provides app navigation links including documents
   assert.match(source, /#\/settings/);
   assert.match(source, /is-active/);
 });
+
+test('standalone manifest uses repo-level entry workspace and current shared package set', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../app.manifest.ts'), 'utf8');
+
+  assert.match(source, /entryWorkspace: '\.'/);
+  assert.match(source, /@moritzbrantner\/maps/);
+  assert.match(source, /@moritzbrantner\/ui/);
+});
+
+test('direct-sync interfaces are removed from scripts and workflows', () => {
+  const packageSource = fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8');
+
+  assert.doesNotMatch(packageSource, /sync:monorepo/);
+  assert.equal(
+    fs.existsSync(path.resolve(__dirname, '../scripts/dispatch-monorepo-update.mjs')),
+    false,
+  );
+  assert.equal(
+    fs.existsSync(path.resolve(__dirname, '../.github/workflows/update-monorepo.yml')),
+    false,
+  );
+  assert.equal(
+    fs.existsSync(
+      path.resolve(__dirname, '../.github/workflows/notify-monorepo-subtree-sync.yml'),
+    ),
+    false,
+  );
+});
