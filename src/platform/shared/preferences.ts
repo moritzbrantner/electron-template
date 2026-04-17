@@ -27,6 +27,16 @@ export interface DesktopPreferences {
   };
 }
 
+export interface DesktopPreferencesProfile {
+  kind: 'desktop-preferences-profile';
+  version: number;
+  exportedAt: string;
+  data: DesktopPreferences;
+}
+
+export const desktopPreferencesProfileKind = 'desktop-preferences-profile';
+export const desktopPreferencesProfileVersion = 3;
+
 export const reservedDesktopHotkeys = [
   'CmdOrCtrl+,',
   'CmdOrCtrl+N',
@@ -60,8 +70,19 @@ export const defaultDesktopPreferences: DesktopPreferences = {
   },
 };
 
+type DesktopPreferencesV1 = Omit<DesktopPreferences, 'display' | 'hotkeys'>;
+type DesktopPreferencesV2 = Omit<DesktopPreferences, 'hotkeys'>;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object');
+}
+
+function isThemePreference(value: unknown): value is ThemePreference {
+  return value === 'system' || value === 'light' || value === 'dark';
+}
+
+function isIsoTimestamp(value: string) {
+  return !Number.isNaN(Date.parse(value));
 }
 
 export function normalizeDesktopHotkeyKeyToken(value: string) {
@@ -266,11 +287,7 @@ export function isDesktopPreferences(value: unknown): value is DesktopPreference
     return false;
   }
 
-  if (
-    value.appearance.theme !== 'system' &&
-    value.appearance.theme !== 'light' &&
-    value.appearance.theme !== 'dark'
-  ) {
+  if (!isThemePreference(value.appearance.theme)) {
     return false;
   }
 
@@ -280,6 +297,118 @@ export function isDesktopPreferences(value: unknown): value is DesktopPreference
     typeof value.documents.reopenLastDocument === 'boolean' &&
     isNavigationHotkeys(value.hotkeys.navigation)
   );
+}
+
+function normalizeDesktopPreferencesV1(value: unknown): DesktopPreferencesV1 {
+  const current = isRecord(value) ? value : {};
+  const appearance = isRecord(current.appearance) ? current.appearance : {};
+  const developer = isRecord(current.developer) ? current.developer : {};
+  const documents = isRecord(current.documents) ? current.documents : {};
+
+  return {
+    appearance: {
+      theme: isThemePreference(appearance.theme)
+        ? appearance.theme
+        : defaultDesktopPreferences.appearance.theme,
+    },
+    developer: {
+      openDevToolsOnLaunch:
+        typeof developer.openDevToolsOnLaunch === 'boolean'
+          ? developer.openDevToolsOnLaunch
+          : defaultDesktopPreferences.developer.openDevToolsOnLaunch,
+    },
+    documents: {
+      reopenLastDocument:
+        typeof documents.reopenLastDocument === 'boolean'
+          ? documents.reopenLastDocument
+          : defaultDesktopPreferences.documents.reopenLastDocument,
+    },
+  };
+}
+
+function normalizeDesktopPreferencesV2(value: unknown): DesktopPreferencesV2 {
+  const base = normalizeDesktopPreferencesV1(value);
+  const current = isRecord(value) ? value : {};
+  const display = isRecord(current.display) ? current.display : {};
+
+  return {
+    ...base,
+    display: {
+      useGpu:
+        typeof display.useGpu === 'boolean'
+          ? display.useGpu
+          : defaultDesktopPreferences.display.useGpu,
+    },
+  };
+}
+
+function normalizeDesktopPreferencesV3(value: unknown): DesktopPreferences {
+  const base = normalizeDesktopPreferencesV2(value);
+  const current = isRecord(value) ? value : {};
+  const hotkeys = isRecord(current.hotkeys) ? current.hotkeys : {};
+
+  return {
+    ...base,
+    hotkeys: {
+      navigation: normalizeDesktopNavigationHotkeys(hotkeys.navigation),
+    },
+  };
+}
+
+export function normalizeDesktopPreferences(value: unknown): DesktopPreferences {
+  return normalizeDesktopPreferencesV3(value);
+}
+
+export function normalizeDesktopPreferencesFromVersion(value: unknown, version: number) {
+  let nextVersion = Number.isInteger(version) ? version : 0;
+  let data: unknown = value;
+
+  while (nextVersion < desktopPreferencesProfileVersion) {
+    if (nextVersion === 0) {
+      data = normalizeDesktopPreferencesV1(data);
+    } else if (nextVersion === 1) {
+      data = normalizeDesktopPreferencesV2(data);
+    } else if (nextVersion === 2) {
+      data = normalizeDesktopPreferencesV3(data);
+    } else {
+      throw new Error(`Missing desktop preferences profile migration ${nextVersion}`);
+    }
+
+    nextVersion += 1;
+  }
+
+  return normalizeDesktopPreferencesV3(data);
+}
+
+export function isDesktopPreferencesProfile(value: unknown): value is DesktopPreferencesProfile {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === desktopPreferencesProfileKind &&
+    Number.isInteger(value.version) &&
+    typeof value.version === 'number' &&
+    value.version >= 1 &&
+    typeof value.exportedAt === 'string' &&
+    isIsoTimestamp(value.exportedAt) &&
+    isDesktopPreferences(value.data)
+  );
+}
+
+export function normalizeDesktopPreferencesProfile(value: unknown): DesktopPreferencesProfile {
+  const current = isRecord(value) ? value : {};
+  const version = typeof current.version === 'number' ? current.version : 0;
+
+  return {
+    kind: desktopPreferencesProfileKind,
+    version: desktopPreferencesProfileVersion,
+    exportedAt:
+      typeof current.exportedAt === 'string' && isIsoTimestamp(current.exportedAt)
+        ? current.exportedAt
+        : new Date().toISOString(),
+    data: normalizeDesktopPreferencesFromVersion(current.data, version),
+  };
 }
 
 export function normalizeDesktopNavigationHotkeys(value: unknown) {
