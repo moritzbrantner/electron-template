@@ -145,9 +145,7 @@ export function createUploadsService(options: UploadsServiceOptions) {
         });
         existingPaths.add(filePath);
         addedCount += 1;
-      } catch (_error) {
-        continue;
-      }
+      } catch (_error) {}
     }
 
     await persistState({

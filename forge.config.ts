@@ -6,17 +6,33 @@ import { MakerRpm } from '@electron-forge/maker-rpm';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { appManifest } from './app.manifest';
+
+const executableName = appManifest.packageName;
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    executableName,
   },
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({}),
     new MakerZIP({}, ['darwin']),
-    new MakerRpm({}),
-    new MakerDeb({}),
+    new MakerRpm({
+      options: {
+        bin: executableName,
+        name: appManifest.packageName,
+        productName: appManifest.displayName,
+      },
+    }),
+    new MakerDeb({
+      options: {
+        bin: executableName,
+        name: appManifest.packageName,
+        productName: appManifest.displayName,
+      },
+    }),
   ],
   plugins: [
     new VitePlugin({

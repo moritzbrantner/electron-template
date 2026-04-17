@@ -17,7 +17,7 @@ Reusable Electron desktop template with a typed main/preload boundary, publishab
 - `src/renderer.ts`: renderer UI for the template example screens.
 - `src/platform/main`: app-specific main-process services and composition.
 - `src/platform/shared`: shared app-level types and validators.
-- `packages/*`: reusable Electron primitives intended for publishing.
+- `packages/*`: reusable Electron primitives and shared tooling packages intended for publishing.
 - `tests`: source-level unit and integration tests.
 - `e2e`: Playwright Electron tests and fixtures.
 
@@ -72,10 +72,22 @@ Run the quality gate locally:
 bun run ci
 ```
 
+Lint the repository with Biome:
+
+```bash
+bun run lint
+```
+
+Format supported files with Biome:
+
+```bash
+bun run format
+```
+
 Verify that the repository still produces a packaged desktop app:
 
 ```bash
-pnpm test:package
+bun run test:package
 ```
 
 Package distributables:

@@ -40,6 +40,11 @@ jobs:
       - name: Run integration tests
         run: bun run test:integration
 
+      - name: Verify packaged app
+        run: bun run test:package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
+
       - name: Install Playwright Browsers
         run: bunx --bun playwright install --with-deps
 
