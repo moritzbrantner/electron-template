@@ -57,6 +57,14 @@ export const packageAliases = {
     __dirname,
     'packages/electron-preferences/src/shared.ts',
   ),
+  '@moritzbrantner/maps/styles.css': path.resolve(
+    __dirname,
+    '../platform-packages/packages/maps/styles.css',
+  ),
+  '@moritzbrantner/maps': path.resolve(
+    __dirname,
+    '../platform-packages/packages/maps/src/index.ts',
+  ),
   '@moritzbrantner/electron-window-state/main': path.resolve(
     __dirname,
     'packages/electron-window-state/src/main.ts',

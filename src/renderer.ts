@@ -41,6 +41,8 @@ const appState = {
   ready: false,
   uploads: defaultUploadsState,
 };
+let mapsPlaygroundModule: typeof import('./maps-playground') | null = null;
+let mapsPlaygroundRenderVersion = 0;
 
 interface DocumentEditorSnapshot {
   hadFocus: boolean;
@@ -367,7 +369,11 @@ function navigateToRoute(route: AppRoute) {
     return;
   }
 
-  window.location.hash = targetRoute.href;
+  if (window.location.hash === '#/maps') {
+    return 'maps';
+  }
+
+  return 'home';
 }
 
 function createScreenFrame(eyebrowText: string, titleText: string, descriptionText: string) {
@@ -562,8 +568,27 @@ function createHomeScreen() {
     'The workspace now targets Node 24, builds package dist outputs, and is intended to run lint, build, unit, integration, and end-to-end checks in CI.',
   );
 
-  grid.append(sharedPackageCard, featuresCard, structureCard, qualityCard);
+  const mapsCard = createCard(
+    'Maps playground',
+    'A dedicated sandbox route now mounts @moritzbrantner/maps with live filters, feature inspection, and temporal playback controls.',
+  );
+
+  grid.append(sharedPackageCard, featuresCard, structureCard, qualityCard, mapsCard);
   screen.append(grid);
+
+  return screen;
+}
+
+function createMapsScreen() {
+  const screen = createScreenFrame(
+    'Component sandbox',
+    'Maps playground',
+    'Play with @moritzbrantner/maps in-place: filter datasets, inspect selected features, and exercise clustering plus temporal playback without leaving the desktop shell.',
+  );
+
+  const mountPoint = document.createElement('div');
+  mountPoint.className = 'maps-screen-root';
+  screen.append(mountPoint);
 
   return screen;
 }
@@ -1356,6 +1381,28 @@ function createUploadScreen() {
   return screen;
 }
 
+function unmountMapsScreen() {
+  mapsPlaygroundRenderVersion += 1;
+  mapsPlaygroundModule?.unmountMapsPlayground();
+}
+
+async function mountMapsScreen(screen: HTMLElement) {
+  const renderVersion = mapsPlaygroundRenderVersion;
+  const mountPoint = screen.querySelector<HTMLElement>('.maps-screen-root');
+
+  if (!mountPoint) {
+    return;
+  }
+
+  mapsPlaygroundModule ??= await import('./maps-playground');
+
+  if (renderVersion !== mapsPlaygroundRenderVersion || getCurrentRoute() !== 'maps' || !mountPoint.isConnected) {
+    return;
+  }
+
+  mapsPlaygroundModule.mountMapsPlayground(mountPoint);
+}
+
 function renderApp() {
   const app = document.getElementById('app');
   if (!app) {
@@ -1364,6 +1411,7 @@ function renderApp() {
 
   const route = getCurrentRoute();
   const documentEditorSnapshot = route === 'documents' ? captureDocumentEditorSnapshot() : null;
+  unmountMapsScreen();
   app.innerHTML = '';
   app.append(createNavbar(route, appState.preferences.hotkeys.navigation));
 
@@ -1385,6 +1433,13 @@ function renderApp() {
 
   if (route === 'uploads') {
     app.append(createUploadScreen());
+    return;
+  }
+
+  if (route === 'maps') {
+    const screen = createMapsScreen();
+    app.append(screen);
+    void mountMapsScreen(screen);
     return;
   }
 
