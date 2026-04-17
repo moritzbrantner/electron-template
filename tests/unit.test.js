@@ -15,6 +15,7 @@ test('desktop renderer uses the preload-backed desktop platform APIs', () => {
   assert.match(source, /window\.desktop\.uploads\.startAll\(\)/);
   assert.match(source, /window\.desktop\.uploads\.retryUpload/);
   assert.match(source, /appState\.preferences\.hotkeys\.navigation/);
+  assert.match(source, /window\.location\.hash = targetRoute\.href/);
   assert.match(source, /Reset navigation hotkeys/);
   assert.match(source, /Each page shortcut must be unique\./);
   assert.match(source, /Built-in document shortcuts stay global/);
@@ -44,7 +45,9 @@ test('desktop navbar component provides app navigation links including documents
   assert.match(source, /Settings/);
   assert.match(source, /Documents/);
   assert.match(source, /Uploads/);
+  assert.match(source, /Maps/);
   assert.match(source, /#\/documents/);
+  assert.match(source, /#\/maps/);
   assert.match(source, /#\/uploads/);
   assert.match(source, /#\/settings/);
   assert.match(source, /is-active/);

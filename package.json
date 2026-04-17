@@ -24,7 +24,7 @@
     "test": "bun run test:unit && bun run test:integration && bun run test:e2e",
     "test:unit": "bun test ./tests/unit.test.js ./tests/packages/*.test.mts",
     "test:integration": "bun test ./tests/integration.test.js",
-    "test:e2e": "bun run build && bunx --bun playwright test",
+    "test:e2e": "bun run build && \"$(dirname \"$(command -v npm)\")/node\" ./node_modules/playwright/cli.js test",
     "test:package": "node ./scripts/verify-package.mjs"
   },
   "keywords": [],

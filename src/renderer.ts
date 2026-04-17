@@ -60,11 +60,7 @@ function navigateToRoute(route: AppRoute) {
     return;
   }
 
-  if (window.location.hash === '#/maps') {
-    return 'maps';
-  }
-
-  return 'home';
+  window.location.hash = targetRoute.href;
 }
 
 function createScreenFrame(eyebrowText: string, titleText: string, descriptionText: string) {
@@ -412,7 +408,11 @@ function createSettingsScreen() {
   editableHotkeys.className = 'hotkey-list';
 
   appRouteDefinitions.forEach((definition) => {
-    const currentHotkey = appState.preferences.hotkeys.navigation[definition.route];
+    if (!definition.hotkeyName) {
+      return;
+    }
+
+    const currentHotkey = appState.preferences.hotkeys.navigation[definition.hotkeyName];
 
     editableHotkeys.append(
       createHotkeyRow(
@@ -438,7 +438,7 @@ function createSettingsScreen() {
               >
             ).some(
               ([name, accelerator]) =>
-                name !== definition.route && accelerator === normalizedValue,
+                name !== definition.hotkeyName && accelerator === normalizedValue,
             );
 
             if (hasDuplicate) {
@@ -465,7 +465,7 @@ function createSettingsScreen() {
             void window.desktop.preferences.set('hotkeys', {
               navigation: {
                 ...appState.preferences.hotkeys.navigation,
-                [definition.route]: normalizedValue,
+                [definition.hotkeyName]: normalizedValue,
               },
             });
           },

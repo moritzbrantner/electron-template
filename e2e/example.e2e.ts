@@ -21,6 +21,12 @@ async function updateNavigationHotkey(page: Page, label: string, accelerator: st
   await input.press('Tab');
 }
 
+async function runCommand(page: Page, commandId: string) {
+  await page.evaluate(async (id) => {
+    await window.desktop.commands.run(id);
+  }, commandId);
+}
+
 async function relaunchElectronApp(userDataDir: string) {
   const appRoot = path.resolve(__dirname, '..');
 
@@ -59,8 +65,8 @@ test('persists the selected theme across relaunch', async ({ app, page, userData
   await relaunchedApp.close();
 });
 
-test('opens settings through the command-backed hotkey', async ({ page }) => {
-  await page.keyboard.press(`${shortcutKey}+,`);
+test('opens settings through the command registry', async ({ page }) => {
+  await runCommand(page, 'app.openPreferences');
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
 });
 
@@ -120,10 +126,10 @@ test('saves and reopens a document through the command-backed document flow', as
   const editor = page.locator('textarea.document-editor');
   await editor.fill('Playwright save flow');
 
-  await page.keyboard.press(`${shortcutKey}+S`);
+  await runCommand(page, 'document.save');
   await expect(page.getByText(/Saved e2e-document\.desktop\.json/)).toBeVisible();
 
-  await page.keyboard.press(`${shortcutKey}+N`);
+  await runCommand(page, 'document.new');
   await expect(editor).toHaveValue(
     'Write here. Save with CmdOrCtrl+S and reopen from the recent files list.',
   );

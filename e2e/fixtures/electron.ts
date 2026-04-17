@@ -16,7 +16,8 @@ type ElectronFixtures = {
 };
 
 export const test = base.extend<ElectronFixtures>({
-  userDataDir: async (_fixtures, use, testInfo) => {
+  userDataDir: async ({ browserName }, use, testInfo) => {
+    void browserName;
     await use(testInfo.outputPath('user-data'));
   },
   app: async ({ userDataDir }, use) => {
@@ -28,9 +29,6 @@ export const test = base.extend<ElectronFixtures>({
         `Electron app root is wrong: ${appRoot} (missing package.json)`,
       );
     }
-
-    console.log("Launching Electron from", appRoot);
-
     const app = await electron.launch({
       executablePath: electronPath as unknown as string,
       args: ["--no-sandbox", "--disable-gpu", appRoot],
@@ -41,8 +39,6 @@ export const test = base.extend<ElectronFixtures>({
         PLAYWRIGHT_E2E_USER_DATA_DIR: userDataDir,
       },
     });
-
-    console.log("Electron launch resolved");
 
     await use(app);
     await app.close();
