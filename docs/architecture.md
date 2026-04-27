@@ -8,7 +8,7 @@ Use the repository in three layers:
    Put code here only when it is reusable across multiple Electron apps.
 2. `src/platform/*`
    Put app-specific main/preload/shared platform code here.
-3. `src/renderer.ts`
+3. `src/renderer.tsx`
    Keep renderer concerns focused on presentation and user interaction.
 
 ## What belongs in a package
@@ -35,6 +35,7 @@ Current examples:
 
 - The upload queue workflow and its UI language.
 - Route selection and screen composition.
+- Screens and product-specific flows that should remain app-owned.
 - App manifest metadata.
 - Decisions about which commands should navigate to which screen.
 

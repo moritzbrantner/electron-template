@@ -61,9 +61,12 @@ export function createPreferencesService<TPreferences extends Record<string, unk
   function installIpc(ipcMain: IpcMain) {
     ipcMain.handle(preferencesChannels.getAll, async () => getAll());
     ipcMain.handle(preferencesChannels.getOne, async (_event, key: keyof TPreferences) => get(key));
-    ipcMain.handle(preferencesChannels.setOne, async (_event, key: keyof TPreferences, value: TPreferences[keyof TPreferences]) => {
-      await set(key, value);
-    });
+    ipcMain.handle(
+      preferencesChannels.setOne,
+      async (_event, key: keyof TPreferences, value: TPreferences[keyof TPreferences]) => {
+        await set(key, value);
+      },
+    );
     ipcMain.handle(preferencesChannels.reset, async () => reset());
 
     return () => {

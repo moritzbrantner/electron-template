@@ -236,10 +236,9 @@ function normalizeNavigationHotkeys(value: unknown): NavigationHotkeys {
       return;
     }
 
-    const fallbackValue = (
-      names.map((routeName) => defaultNavigationHotkeys[routeName]).find((candidate) => !usedHotkeys.has(candidate))
-      ?? defaultNavigationHotkeys[name]
-    );
+    const fallbackValue =
+      names.map((routeName) => defaultNavigationHotkeys[routeName]).find((candidate) => !usedHotkeys.has(candidate)) ??
+      defaultNavigationHotkeys[name];
 
     nextHotkeys[name] = fallbackValue;
     usedHotkeys.add(fallbackValue);
@@ -255,7 +254,8 @@ export function isNavigationHotkeys(value: unknown): value is NavigationHotkeys 
 
   const usedHotkeys = new Set<string>(reservedDesktopHotkeys);
 
-  return Object.entries(value).length === Object.keys(defaultNavigationHotkeys).length &&
+  return (
+    Object.entries(value).length === Object.keys(defaultNavigationHotkeys).length &&
     Object.entries(value).every(([name, accelerator]) => {
       if (!isNavigationHotkeyName(name) || typeof accelerator !== 'string') {
         return false;
@@ -269,7 +269,8 @@ export function isNavigationHotkeys(value: unknown): value is NavigationHotkeys 
 
       usedHotkeys.add(normalizedValue);
       return true;
-    });
+    })
+  );
 }
 
 export function isDesktopPreferences(value: unknown): value is DesktopPreferences {
@@ -307,9 +308,7 @@ function normalizeDesktopPreferencesV1(value: unknown): DesktopPreferencesV1 {
 
   return {
     appearance: {
-      theme: isThemePreference(appearance.theme)
-        ? appearance.theme
-        : defaultDesktopPreferences.appearance.theme,
+      theme: isThemePreference(appearance.theme) ? appearance.theme : defaultDesktopPreferences.appearance.theme,
     },
     developer: {
       openDevToolsOnLaunch:
@@ -334,10 +333,7 @@ function normalizeDesktopPreferencesV2(value: unknown): DesktopPreferencesV2 {
   return {
     ...base,
     display: {
-      useGpu:
-        typeof display.useGpu === 'boolean'
-          ? display.useGpu
-          : defaultDesktopPreferences.display.useGpu,
+      useGpu: typeof display.useGpu === 'boolean' ? display.useGpu : defaultDesktopPreferences.display.useGpu,
     },
   };
 }
@@ -415,10 +411,7 @@ export function normalizeDesktopNavigationHotkeys(value: unknown) {
   return normalizeNavigationHotkeys(value);
 }
 
-export function resolveThemePreference(
-  theme: ThemePreference,
-  systemPrefersDark: boolean,
-): 'dark' | 'light' {
+export function resolveThemePreference(theme: ThemePreference, systemPrefersDark: boolean): 'dark' | 'light' {
   if (theme === 'system') {
     return systemPrefersDark ? 'dark' : 'light';
   }

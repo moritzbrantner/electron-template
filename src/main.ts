@@ -22,12 +22,9 @@ if (!started) {
   }
 }
 
-const rendererName =
-  typeof MAIN_WINDOW_VITE_NAME !== 'undefined' ? MAIN_WINDOW_VITE_NAME : 'main_window';
+const rendererName = typeof MAIN_WINDOW_VITE_NAME !== 'undefined' ? MAIN_WINDOW_VITE_NAME : 'main_window';
 const rendererDevServerUrl =
-  typeof MAIN_WINDOW_VITE_DEV_SERVER_URL !== 'undefined'
-    ? MAIN_WINDOW_VITE_DEV_SERVER_URL
-    : undefined;
+  typeof MAIN_WINDOW_VITE_DEV_SERVER_URL !== 'undefined' ? MAIN_WINDOW_VITE_DEV_SERVER_URL : undefined;
 
 let mainWindow: BrowserWindow | null = null;
 let platform: ReturnType<typeof createDesktopPlatform> | null = null;

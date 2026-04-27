@@ -7,10 +7,7 @@ import { test } from 'bun:test';
 
 import { createJsonStore } from '../../packages/electron-json-store/src/main.ts';
 import { createUploadsService } from '../../src/platform/main/create-uploads-service.ts';
-import {
-  defaultUploadsState,
-  isUploadsState,
-} from '../../src/platform/shared/uploads.ts';
+import { defaultUploadsState, isUploadsState } from '../../src/platform/shared/uploads.ts';
 
 async function waitFor(predicate: () => Promise<boolean>, timeoutInMs = 500) {
   const startTime = Date.now();

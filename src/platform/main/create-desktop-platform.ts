@@ -2,29 +2,16 @@ import path from 'node:path';
 
 import { app, BrowserWindow, Menu, dialog, ipcMain } from 'electron';
 
-import {
-  createCommandsService,
-  type CommandDefinition,
-} from '@moritzbrantner/electron-commands/main';
-import {
-  createDocumentsService,
-  type DocumentDialogAdapter,
-} from '@moritzbrantner/electron-documents/main';
+import { createCommandsService, type CommandDefinition } from '@moritzbrantner/electron-commands/main';
+import { createDocumentsService, type DocumentDialogAdapter } from '@moritzbrantner/electron-documents/main';
 import { createJsonStore } from '@moritzbrantner/electron-json-store/main';
 import { createPreferencesService } from '@moritzbrantner/electron-preferences/main';
 import { createWindowStateManager } from '@moritzbrantner/electron-window-state/main';
 import type { StoredWindowStateMap } from '@moritzbrantner/electron-window-state/shared';
 
 import { desktopDocumentSerializer } from '../shared/document-serializer';
-import {
-  defaultDesktopPreferences,
-  isDesktopPreferences,
-  type DesktopPreferences,
-} from '../shared/preferences';
-import {
-  defaultUploadsState,
-  isUploadsState,
-} from '../shared/uploads';
+import { defaultDesktopPreferences, isDesktopPreferences, type DesktopPreferences } from '../shared/preferences';
+import { defaultUploadsState, isUploadsState } from '../shared/uploads';
 import { createDesktopPreferencesStore } from './desktop-preferences-store';
 import { createUploadsService, type UploadDialogAdapter } from './create-uploads-service';
 
@@ -54,9 +41,7 @@ function isStoredRecentDocumentsState(value: unknown): value is StoredRecentDocu
       }
 
       return (
-        typeof item.filePath === 'string' &&
-        typeof item.lastOpenedAt === 'string' &&
-        typeof item.name === 'string'
+        typeof item.filePath === 'string' && typeof item.lastOpenedAt === 'string' && typeof item.name === 'string'
       );
     })
   );
@@ -90,10 +75,7 @@ async function navigateToHash(browserWindow: BrowserWindow | null, hash: string)
     return;
   }
 
-  await browserWindow.webContents.executeJavaScript(
-    `window.location.hash = ${JSON.stringify(hash)};`,
-    true,
-  );
+  await browserWindow.webContents.executeJavaScript(`window.location.hash = ${JSON.stringify(hash)};`, true);
 }
 
 function createDocumentDialogAdapter(storagePath: string): DocumentDialogAdapter {
@@ -221,8 +203,7 @@ export function createDesktopPlatform(resolveMainWindow: () => BrowserWindow | n
 
   const preferences = createPreferencesService<DesktopPreferences>({
     defaultValue: defaultDesktopPreferences,
-    getBroadcastTargets: () =>
-      BrowserWindow.getAllWindows().map((browserWindow) => browserWindow.webContents),
+    getBroadcastTargets: () => BrowserWindow.getAllWindows().map((browserWindow) => browserWindow.webContents),
     store: preferencesStore,
     validate: isDesktopPreferences,
   });
@@ -230,16 +211,14 @@ export function createDesktopPlatform(resolveMainWindow: () => BrowserWindow | n
   const documents = createDocumentsService({
     defaultContent: 'Write here. Save with CmdOrCtrl+S and reopen from the recent files list.',
     dialogAdapter: createDocumentDialogAdapter(storageRoot),
-    getBroadcastTargets: (browserWindow) =>
-      browserWindow ? [browserWindow.webContents] : [],
+    getBroadcastTargets: (browserWindow) => (browserWindow ? [browserWindow.webContents] : []),
     initialFileName: 'Untitled.desktop.json',
     recentStore: recentDocumentsStore,
     serializer: desktopDocumentSerializer,
   });
   const uploads = createUploadsService({
     dialogAdapter: createUploadDialogAdapter(),
-    getBroadcastTargets: () =>
-      BrowserWindow.getAllWindows().map((browserWindow) => browserWindow.webContents),
+    getBroadcastTargets: () => BrowserWindow.getAllWindows().map((browserWindow) => browserWindow.webContents),
     store: uploadsStore,
   });
 

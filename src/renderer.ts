@@ -17,10 +17,7 @@ import {
   type DesktopPreferences,
   type NavigationHotkeyName,
 } from './platform/shared/preferences';
-import {
-  defaultUploadsState,
-  type UploadItem,
-} from './platform/shared/uploads';
+import { defaultUploadsState, type UploadItem } from './platform/shared/uploads';
 
 const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -304,12 +301,7 @@ function createSettingsScreen() {
     button.type = 'button';
     button.className =
       appState.preferences.appearance.theme === themeMode ? 'settings-chip is-active' : 'settings-chip';
-    button.textContent =
-      themeMode === 'system'
-        ? 'System theme'
-        : themeMode === 'light'
-          ? 'Light mode'
-          : 'Dark mode';
+    button.textContent = themeMode === 'system' ? 'System theme' : themeMode === 'light' ? 'Light mode' : 'Dark mode';
     button.addEventListener('click', () => {
       void window.desktop.preferences.set('appearance', {
         theme: themeMode as DesktopPreferences['appearance']['theme'],
@@ -401,8 +393,7 @@ function createSettingsScreen() {
   hotkeysTitle.textContent = 'Hotkeys';
 
   const hotkeysBody = document.createElement('p');
-  hotkeysBody.textContent =
-    'Page navigation shortcuts are editable and stored with your other desktop preferences.';
+  hotkeysBody.textContent = 'Page navigation shortcuts are editable and stored with your other desktop preferences.';
 
   const editableHotkeys = document.createElement('div');
   editableHotkeys.className = 'hotkey-list';
@@ -415,62 +406,52 @@ function createSettingsScreen() {
     const currentHotkey = appState.preferences.hotkeys.navigation[definition.hotkeyName];
 
     editableHotkeys.append(
-      createHotkeyRow(
-        definition.label,
-        `Open the ${definition.label.toLowerCase()} page.`,
-        currentHotkey,
-        {
-          editable: true,
-          onChange(value, input) {
-            const normalizedValue = normalizeDesktopHotkeyAccelerator(value);
+      createHotkeyRow(definition.label, `Open the ${definition.label.toLowerCase()} page.`, currentHotkey, {
+        editable: true,
+        onChange(value, input) {
+          const normalizedValue = normalizeDesktopHotkeyAccelerator(value);
 
-            if (!normalizedValue) {
-              input.value = currentHotkey;
-              input.setCustomValidity('Use shortcuts like CmdOrCtrl+1 or Alt+Shift+D.');
-              input.reportValidity();
-              input.setCustomValidity('');
-              return;
-            }
+          if (!normalizedValue) {
+            input.value = currentHotkey;
+            input.setCustomValidity('Use shortcuts like CmdOrCtrl+1 or Alt+Shift+D.');
+            input.reportValidity();
+            input.setCustomValidity('');
+            return;
+          }
 
-            const hasDuplicate = (
-              Object.entries(appState.preferences.hotkeys.navigation) as Array<
-                [NavigationHotkeyName, string]
-              >
-            ).some(
-              ([name, accelerator]) =>
-                name !== definition.hotkeyName && accelerator === normalizedValue,
-            );
+          const hasDuplicate = (
+            Object.entries(appState.preferences.hotkeys.navigation) as Array<[NavigationHotkeyName, string]>
+          ).some(([name, accelerator]) => name !== definition.hotkeyName && accelerator === normalizedValue);
 
-            if (hasDuplicate) {
-              input.value = currentHotkey;
-              input.setCustomValidity('Each page shortcut must be unique.');
-              input.reportValidity();
-              input.setCustomValidity('');
-              return;
-            }
+          if (hasDuplicate) {
+            input.value = currentHotkey;
+            input.setCustomValidity('Each page shortcut must be unique.');
+            input.reportValidity();
+            input.setCustomValidity('');
+            return;
+          }
 
-            if (reservedDesktopHotkeys.includes(normalizedValue as (typeof reservedDesktopHotkeys)[number])) {
-              input.value = currentHotkey;
-              input.setCustomValidity('That shortcut is already reserved for a built-in command.');
-              input.reportValidity();
-              input.setCustomValidity('');
-              return;
-            }
+          if (reservedDesktopHotkeys.includes(normalizedValue as (typeof reservedDesktopHotkeys)[number])) {
+            input.value = currentHotkey;
+            input.setCustomValidity('That shortcut is already reserved for a built-in command.');
+            input.reportValidity();
+            input.setCustomValidity('');
+            return;
+          }
 
-            if (normalizedValue === currentHotkey) {
-              input.value = normalizedValue;
-              return;
-            }
+          if (normalizedValue === currentHotkey) {
+            input.value = normalizedValue;
+            return;
+          }
 
-            void window.desktop.preferences.set('hotkeys', {
-              navigation: {
-                ...appState.preferences.hotkeys.navigation,
-                [definition.hotkeyName]: normalizedValue,
-              },
-            });
-          },
+          void window.desktop.preferences.set('hotkeys', {
+            navigation: {
+              ...appState.preferences.hotkeys.navigation,
+              [definition.hotkeyName]: normalizedValue,
+            },
+          });
         },
-      ),
+      }),
     );
   });
 
@@ -520,9 +501,7 @@ function createSettingsScreen() {
       title: 'Save document as',
     },
   ].forEach((hotkey) => {
-    commandHotkeys.append(
-      createHotkeyRow(hotkey.title, hotkey.description, hotkey.accelerator),
-    );
+    commandHotkeys.append(createHotkeyRow(hotkey.title, hotkey.description, hotkey.accelerator));
   });
 
   hotkeysCard.append(
@@ -675,11 +654,7 @@ function formatTimestamp(timestamp: string | null) {
   return new Date(timestamp).toLocaleString();
 }
 
-function createUploadButton(
-  label: string,
-  onClick: () => void,
-  options?: { disabled?: boolean; primary?: boolean },
-) {
+function createUploadButton(label: string, onClick: () => void, options?: { disabled?: boolean; primary?: boolean }) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = options?.primary ? 'upload-button upload-button--primary' : 'upload-button';
@@ -724,9 +699,13 @@ function createUploadActions(item: UploadItem) {
 
   if (item.status === 'queued') {
     actions.append(
-      createUploadButton('Start', () => {
-        void window.desktop.uploads.startUpload(item.id);
-      }, { primary: true }),
+      createUploadButton(
+        'Start',
+        () => {
+          void window.desktop.uploads.startUpload(item.id);
+        },
+        { primary: true },
+      ),
       createUploadButton('Cancel', () => {
         void window.desktop.uploads.cancelUpload(item.id);
       }),
@@ -739,9 +718,13 @@ function createUploadActions(item: UploadItem) {
     );
   } else if (item.status === 'failed' || item.status === 'canceled') {
     actions.append(
-      createUploadButton('Retry', () => {
-        void window.desktop.uploads.retryUpload(item.id);
-      }, { primary: true }),
+      createUploadButton(
+        'Retry',
+        () => {
+          void window.desktop.uploads.retryUpload(item.id);
+        },
+        { primary: true },
+      ),
     );
   }
 
@@ -879,15 +862,27 @@ function createUploadScreen() {
   const hasCompletedUploads = completedCount > 0;
 
   dropButtons.append(
-    createUploadButton('Pick files', () => {
-      void window.desktop.uploads.pickFiles();
-    }, { primary: true }),
-    createUploadButton('Start queued', () => {
-      void window.desktop.uploads.startAll();
-    }, { disabled: !hasQueuedUploads }),
-    createUploadButton('Clear completed', () => {
-      void window.desktop.uploads.clearCompleted();
-    }, { disabled: !hasCompletedUploads }),
+    createUploadButton(
+      'Pick files',
+      () => {
+        void window.desktop.uploads.pickFiles();
+      },
+      { primary: true },
+    ),
+    createUploadButton(
+      'Start queued',
+      () => {
+        void window.desktop.uploads.startAll();
+      },
+      { disabled: !hasQueuedUploads },
+    ),
+    createUploadButton(
+      'Clear completed',
+      () => {
+        void window.desktop.uploads.clearCompleted();
+      },
+      { disabled: !hasCompletedUploads },
+    ),
   );
 
   const setDropzoneActive = (isActive: boolean) => {
@@ -1035,9 +1030,9 @@ function handleKeyboardShortcuts(event: KeyboardEvent) {
     return;
   }
 
-  const matchedRoute = (
-    Object.entries(appState.preferences.hotkeys.navigation) as Array<[AppRoute, string]>
-  ).find(([, routeAccelerator]) => routeAccelerator === accelerator)?.[0];
+  const matchedRoute = (Object.entries(appState.preferences.hotkeys.navigation) as Array<[AppRoute, string]>).find(
+    ([, routeAccelerator]) => routeAccelerator === accelerator,
+  )?.[0];
 
   if (!matchedRoute || matchedRoute === getCurrentRoute()) {
     return;

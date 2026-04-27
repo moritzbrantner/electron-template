@@ -9,11 +9,7 @@ import type { BrowserWindow, IpcMain, WebContents } from 'electron';
 
 import type { JsonStore } from '@moritzbrantner/electron-json-store/main';
 
-import {
-  uploadsChannels,
-  type UploadItem,
-  type UploadsState,
-} from '../shared/uploads.ts';
+import { uploadsChannels, type UploadItem, type UploadsState } from '../shared/uploads.ts';
 
 function cloneValue<TValue>(value: TValue): TValue {
   return structuredClone(value);
@@ -100,10 +96,11 @@ export function createUploadsService(options: UploadsServiceOptions) {
     );
     const recoveredState = {
       items: recoveredItems,
-      statusMessage:
-        recoveredItems.some((item) => item.status === 'failed' && item.error === 'Upload interrupted before completion.')
-          ? 'Recovered upload queue after restart.'
-          : loadedState.statusMessage,
+      statusMessage: recoveredItems.some(
+        (item) => item.status === 'failed' && item.error === 'Upload interrupted before completion.',
+      )
+        ? 'Recovered upload queue after restart.'
+        : loadedState.statusMessage,
     };
 
     stateCache = cloneValue(recoveredState);
@@ -176,11 +173,7 @@ export function createUploadsService(options: UploadsServiceOptions) {
     await addFiles(result.filePaths);
   }
 
-  async function setItemState(
-    uploadId: string,
-    updater: (item: UploadItem) => UploadItem,
-    statusMessage: string,
-  ) {
+  async function setItemState(uploadId: string, updater: (item: UploadItem) => UploadItem, statusMessage: string) {
     const snapshot = await getState();
     let didUpdate = false;
     const nextItems = snapshot.items.map((item) => {
@@ -367,9 +360,7 @@ export function createUploadsService(options: UploadsServiceOptions) {
       await persistState({
         items: nextItems,
         statusMessage:
-          nextItems.length === snapshot.items.length
-            ? 'No completed uploads to clear.'
-            : 'Cleared completed uploads.',
+          nextItems.length === snapshot.items.length ? 'No completed uploads to clear.' : 'Cleared completed uploads.',
       });
     });
   }

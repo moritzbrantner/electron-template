@@ -14,10 +14,10 @@ Reusable Electron desktop scaffold with a typed main/preload boundary, publishab
 
 - `src/main.ts`: Electron entrypoint and `BrowserWindow` lifecycle.
 - `src/preload.ts`: preload bridge that exposes the typed desktop APIs.
-- `src/renderer.ts`: renderer UI for the template example screens.
+- `src/renderer.tsx`: renderer UI for the template screens and app-owned flows.
 - `src/platform/main`: app-specific main-process services and composition.
 - `src/platform/shared`: shared app-level types and validators.
-- `packages/*`: reusable Electron primitives and shared tooling packages intended for publishing.
+- `packages/*`: reusable Electron primitives intended for publishing.
 - `tests`: source-level unit and integration tests.
 - `e2e`: Playwright desktop smoke coverage and fixtures.
 
@@ -75,13 +75,13 @@ Run the quality gate locally:
 bun run ci
 ```
 
-Lint the repository with Biome:
+Check formatting with Oxfmt:
 
 ```bash
 bun run lint
 ```
 
-Format supported files with Biome:
+Format supported files with Oxfmt:
 
 ```bash
 bun run format
@@ -101,7 +101,7 @@ bun run make
 
 ## Extending the template
 
-- Add app-specific workflows under `src/platform/main` and `src/platform/shared` first.
+- Add app-specific workflows and screen flows under `src/platform/main`, `src/platform/shared`, and `src/renderer.tsx` first.
 - Extract logic into `packages/*` only when it is generic enough to serve multiple apps.
 - Expose renderer-safe APIs only through preload bridges.
 - Prefer persisted typed state in the main process over renderer-owned local storage.

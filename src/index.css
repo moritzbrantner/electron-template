@@ -11,9 +11,7 @@
 }
 
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   margin: auto;
   max-width: 72rem;
   padding: 2rem;
@@ -475,9 +473,7 @@ body {
   justify-content: center;
   gap: 0.9rem;
   border-style: dashed;
-  background:
-    radial-gradient(circle at top left, rgba(103, 232, 249, 0.18), transparent 30%),
-    var(--surface);
+  background: radial-gradient(circle at top left, rgba(103, 232, 249, 0.18), transparent 30%), var(--surface);
 }
 
 .upload-dropzone.is-active {

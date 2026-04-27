@@ -100,11 +100,7 @@ export function unmountMapsPlayground() {
 
 function MapsPlayground() {
   const [region, setRegion] = useState<DemoRegion>('all');
-  const [activeCategories, setActiveCategories] = useState<DemoCategory[]>([
-    'delivery',
-    'sensor',
-    'incident',
-  ]);
+  const [activeCategories, setActiveCategories] = useState<DemoCategory[]>(['delivery', 'sensor', 'incident']);
   const [activeModes, setActiveModes] = useState<DemoMode[]>(['rail', 'air', 'sea']);
   const [clusterRadius, setClusterRadius] = useState(56);
   const [fitToData, setFitToData] = useState(true);
@@ -114,10 +110,8 @@ function MapsPlayground() {
   const [showPlaybackControls, setShowPlaybackControls] = useState(true);
   const [timeStep, setTimeStep] = useState<number | 'any'>('any');
   const [playbackRate, setPlaybackRate] = useState(10);
-  const [clusterFeature, setClusterFeature] =
-    useState<AggregatedMapFeature<DemoPointProperties> | null>(null);
-  const [temporalFeature, setTemporalFeature] =
-    useState<AggregatedMapFeature<DemoTrackProperties> | null>(null);
+  const [clusterFeature, setClusterFeature] = useState<AggregatedMapFeature<DemoPointProperties> | null>(null);
+  const [temporalFeature, setTemporalFeature] = useState<AggregatedMapFeature<DemoTrackProperties> | null>(null);
   const [clusterSummary, setClusterSummary] = useState<VisibleAggregationSummary | null>(null);
   const [temporalSummary, setTemporalSummary] = useState<VisibleAggregationSummary | null>(null);
   const [activeTime, setActiveTime] = useState<number>(temporalDefaultTime);
@@ -131,10 +125,7 @@ function MapsPlayground() {
           return false;
         }
 
-        return (
-          (region === 'all' || properties.region === region) &&
-          activeCategories.includes(properties.category)
-        );
+        return (region === 'all' || properties.region === region) && activeCategories.includes(properties.category);
       }),
     [activeCategories, region],
   );
@@ -147,10 +138,7 @@ function MapsPlayground() {
           return false;
         }
 
-        return (
-          (region === 'all' || properties.region === region) &&
-          activeModes.includes(properties.mode)
-        );
+        return (region === 'all' || properties.region === region) && activeModes.includes(properties.mode);
       }),
     [activeModes, region],
   );
@@ -158,18 +146,12 @@ function MapsPlayground() {
     () => (point) => {
       const properties = point.properties;
 
-      return (
-        (region === 'all' || properties.region === region) &&
-        activeCategories.includes(properties.category)
-      );
+      return (region === 'all' || properties.region === region) && activeCategories.includes(properties.category);
     },
     [activeCategories, region],
   );
   const totalVolume = filteredPoints.reduce((sum, point) => sum + (point.metrics?.volume ?? 0), 0);
-  const totalIncidents = filteredPoints.reduce(
-    (sum, point) => sum + (point.metrics?.incidents ?? 0),
-    0,
-  );
+  const totalIncidents = filteredPoints.reduce((sum, point) => sum + (point.metrics?.incidents ?? 0), 0);
   const currentViewState = regionViewState[region];
   const visibleModesCopy = filteredTracks.length > 0 ? filteredTracks.length : 0;
   const scenarioDefaultTime = getDefaultTimeForSelection(region, activeModes);
@@ -182,9 +164,8 @@ function MapsPlayground() {
           <span className="maps-hero__eyebrow">Renderer sandbox</span>
           <h2>Explore clustered and temporal maps side by side</h2>
           <p>
-            This page mounts the real <code>@moritzbrantner/maps</code> components with
-            deterministic demo data, live prop controls, and inspector panels wired to the
-            package callbacks.
+            This page mounts the real <code>@moritzbrantner/maps</code> components with deterministic demo data, live
+            prop controls, and inspector panels wired to the package callbacks.
           </p>
         </div>
         <div className="maps-stat-grid">
@@ -197,10 +178,7 @@ function MapsPlayground() {
 
       <div className="maps-layout">
         <aside className="maps-sidebar">
-          <ControlCard
-            description="Drive the static clustered dataset."
-            title="Cluster controls"
-          >
+          <ControlCard description="Drive the static clustered dataset." title="Cluster controls">
             <div className="maps-filter-row">
               {(['all', 'europe', 'north-america', 'asia'] as const).map((value) => (
                 <button
@@ -223,9 +201,7 @@ function MapsPlayground() {
                 <button
                   key={category}
                   type="button"
-                  className={
-                    activeCategories.includes(category) ? 'maps-pill is-active' : 'maps-pill'
-                  }
+                  className={activeCategories.includes(category) ? 'maps-pill is-active' : 'maps-pill'}
                   onClick={() => {
                     setActiveCategories((current) => toggleArrayValue(current, category));
                     setClusterFeature(null);
@@ -273,10 +249,7 @@ function MapsPlayground() {
             </label>
           </ControlCard>
 
-          <ControlCard
-            description="Tune the timeline layer and animation behaviour."
-            title="Temporal controls"
-          >
+          <ControlCard description="Tune the timeline layer and animation behaviour." title="Temporal controls">
             <div className="maps-filter-row">
               {(['rail', 'air', 'sea'] as const).map((mode) => (
                 <button
@@ -379,10 +352,7 @@ function MapsPlayground() {
                 <span className="maps-surface-card__eyebrow">ClusteredMap</span>
                 <h3>Static activity clusters</h3>
               </div>
-              <p>
-                Pan, zoom, and click into clusters to inspect aggregate metrics and individual
-                point properties.
-              </p>
+              <p>Pan, zoom, and click into clusters to inspect aggregate metrics and individual point properties.</p>
             </div>
             <ClusteredMap<DemoPointProperties>
               className="maps-map"
@@ -407,10 +377,7 @@ function MapsPlayground() {
                 description="The filtered dataset gives you a quick sanity check against the map state."
                 rows={[
                   createDataRow('Active region', regionLabels[region]),
-                  createDataRow(
-                    'Active categories',
-                    activeCategories.map((value) => categoryLabels[value]).join(', '),
-                  ),
+                  createDataRow('Active categories', activeCategories.map((value) => categoryLabels[value]).join(', ')),
                   createDataRow('Point count', numberFormatter.format(filteredPoints.length)),
                   createDataRow('Volume sum', compactFormatter.format(totalVolume)),
                 ]}
@@ -426,8 +393,8 @@ function MapsPlayground() {
                 <h3>Animated route playback</h3>
               </div>
               <p>
-                The timeline scrubs between route keyframes while preserving the same clustering and
-                selection behaviour.
+                The timeline scrubs between route keyframes while preserving the same clustering and selection
+                behaviour.
               </p>
             </div>
             <TemporalClusteredMap<DemoTrackProperties>
@@ -461,10 +428,7 @@ function MapsPlayground() {
                 description="Use the built-in timeline or switch regions and modes to reset the scenario."
                 rows={[
                   createDataRow('Active region', regionLabels[region]),
-                  createDataRow(
-                    'Active modes',
-                    activeModes.map((value) => modeLabels[value]).join(', '),
-                  ),
+                  createDataRow('Active modes', activeModes.map((value) => modeLabels[value]).join(', ')),
                   createDataRow('Track count', numberFormatter.format(filteredTracks.length)),
                   createDataRow('Current time', formatTime(activeTime)),
                 ]}
@@ -487,15 +451,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ControlCard({
-  children,
-  description,
-  title,
-}: {
-  children: ReactNode;
-  description: string;
-  title: string;
-}) {
+function ControlCard({ children, description, title }: { children: ReactNode; description: string; title: string }) {
   return (
     <section className="maps-panel-card">
       <div className="maps-panel-card__header">
@@ -562,10 +518,7 @@ function describeFeature<TProperties extends Record<string, unknown>>(
       createDataRow('Kind', 'Cluster'),
       createDataRow('Point count', numberFormatter.format(feature.pointCount)),
       createDataRow('Expansion zoom', feature.expansionZoom.toFixed(2)),
-      createDataRow(
-        'Coordinates',
-        `${feature.coordinates[1].toFixed(3)}, ${feature.coordinates[0].toFixed(3)}`,
-      ),
+      createDataRow('Coordinates', `${feature.coordinates[1].toFixed(3)}, ${feature.coordinates[0].toFixed(3)}`),
       createDataRow('Metrics', formatMetrics(feature.metrics)),
     ];
   }
@@ -575,10 +528,7 @@ function describeFeature<TProperties extends Record<string, unknown>>(
   return [
     createDataRow('Kind', 'Point'),
     createDataRow('Label', feature.point.label),
-    createDataRow(
-      'Coordinates',
-      `${feature.coordinates[1].toFixed(3)}, ${feature.coordinates[0].toFixed(3)}`,
-    ),
+    createDataRow('Coordinates', `${feature.coordinates[1].toFixed(3)}, ${feature.coordinates[0].toFixed(3)}`),
     createDataRow('Properties', formatProperties(properties)),
     createDataRow('Metrics', formatMetrics(feature.metrics)),
   ];
@@ -605,9 +555,7 @@ function formatMetrics(metrics: Record<string, number>) {
     return 'None';
   }
 
-  return entries
-    .map(([key, value]) => `${key}: ${compactFormatter.format(value)}`)
-    .join(' | ');
+  return entries.map(([key, value]) => `${key}: ${compactFormatter.format(value)}`).join(' | ');
 }
 
 function formatProperties(properties: Record<string, string | number | undefined>) {

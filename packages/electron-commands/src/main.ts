@@ -1,13 +1,6 @@
 import { createRequire } from 'node:module';
 
-import type {
-  BrowserWindow,
-  IpcMain,
-  IpcMainInvokeEvent,
-  Menu,
-  MenuItem,
-  MenuItemConstructorOptions,
-} from 'electron';
+import type { BrowserWindow, IpcMain, IpcMainInvokeEvent, Menu, MenuItem, MenuItemConstructorOptions } from 'electron';
 
 import { commandsChannels, type CommandState } from './shared.ts';
 
@@ -130,8 +123,7 @@ export function createCommandsService(options: CommandsServiceOptions) {
     return {
       accelerator: definition.accelerator,
       click: async (_menuItem, browserWindow) => {
-        const targetWindow =
-          browserWindow && 'webContents' in browserWindow ? (browserWindow as BrowserWindow) : null;
+        const targetWindow = browserWindow && 'webContents' in browserWindow ? (browserWindow as BrowserWindow) : null;
         await run(commandId, targetWindow);
       },
       enabled: isEnabled(commandId),
@@ -197,9 +189,7 @@ export function createCommandsService(options: CommandsServiceOptions) {
 
     ipcMain.handle(commandsChannels.list, async () => list());
     ipcMain.handle(commandsChannels.run, async (event, commandId: string) => {
-      const window =
-        options.getWindowForEvent?.(event) ??
-        ElectronBrowserWindow.fromWebContents(event.sender);
+      const window = options.getWindowForEvent?.(event) ?? ElectronBrowserWindow.fromWebContents(event.sender);
       await run(commandId, window);
     });
 

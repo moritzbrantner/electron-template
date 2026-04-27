@@ -11,11 +11,13 @@ The normative scaffold contract lives in `monorepo/SCAFFOLD_V2.md`.
 ## What is local vs shared
 
 Local:
+
 - Electron main/preload/renderer app composition
 - desktop-only package set and upload/reference flows
 - Forge/Vite packaging and e2e setup
 
 Shared:
+
 - scaffold contract from `monorepo`
 - pinned reusable workflow references
 - structural migrations from `@moritzbrantner/platform-upgrader`
@@ -41,4 +43,3 @@ Shared:
 - `.platform-upgrader.json`
 - `app.manifest.ts`
 - `docs/architecture.md`
-

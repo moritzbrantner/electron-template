@@ -19,5 +19,6 @@ export default defineConfig({
   },
   resolve: {
     alias: packageAliases,
+    dedupe: ['react', 'react-dom'],
   },
 });

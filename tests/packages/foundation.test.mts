@@ -36,9 +36,9 @@ test('json store loads defaults, validates, migrates, and writes atomically', as
     validate: (value): value is typeof defaults =>
       Boolean(
         value &&
-          typeof value === 'object' &&
-          typeof (value as typeof defaults).enabled === 'boolean' &&
-          typeof (value as typeof defaults).theme === 'string',
+        typeof value === 'object' &&
+        typeof (value as typeof defaults).enabled === 'boolean' &&
+        typeof (value as typeof defaults).theme === 'string',
       ),
     version: 1,
   });
@@ -61,9 +61,9 @@ test('json store loads defaults, validates, migrates, and writes atomically', as
     validate: (value): value is typeof defaults =>
       Boolean(
         value &&
-          typeof value === 'object' &&
-          typeof (value as typeof defaults).enabled === 'boolean' &&
-          typeof (value as typeof defaults).theme === 'string',
+        typeof value === 'object' &&
+        typeof (value as typeof defaults).enabled === 'boolean' &&
+        typeof (value as typeof defaults).theme === 'string',
       ),
     version: 1,
   });
@@ -73,25 +73,22 @@ test('json store loads defaults, validates, migrates, and writes atomically', as
   await migratedStore.save({ enabled: false, theme: 'light' });
   const persisted = JSON.parse(await readFile(filePath, 'utf8'));
   assert.deepEqual(persisted.data, { enabled: false, theme: 'light' });
-  await assert.rejects(
-    async () => {
-      await writeFile(filePath, JSON.stringify({ data: { broken: true }, version: 1 }), 'utf8');
-      const invalidStore = createJsonStore({
-        defaultValue: defaults,
-        filePath,
-        validate: (value): value is typeof defaults =>
-          Boolean(
-            value &&
-              typeof value === 'object' &&
-              typeof (value as typeof defaults).enabled === 'boolean' &&
-              typeof (value as typeof defaults).theme === 'string',
-          ),
-        version: 1,
-      });
-      await invalidStore.load();
-    },
-    /Invalid persisted data/,
-  );
+  await assert.rejects(async () => {
+    await writeFile(filePath, JSON.stringify({ data: { broken: true }, version: 1 }), 'utf8');
+    const invalidStore = createJsonStore({
+      defaultValue: defaults,
+      filePath,
+      validate: (value): value is typeof defaults =>
+        Boolean(
+          value &&
+          typeof value === 'object' &&
+          typeof (value as typeof defaults).enabled === 'boolean' &&
+          typeof (value as typeof defaults).theme === 'string',
+        ),
+      version: 1,
+    });
+    await invalidStore.load();
+  }, /Invalid persisted data/);
   await assert.rejects(() => stat(`${filePath}.tmp`));
   await rm(directory, { force: true, recursive: true });
 });
@@ -167,26 +164,20 @@ test('preferences service supports get, set, reset, validation, and subscription
     },
   });
 
-  await assert.rejects(
-    async () => {
-      await preferences.set('developer', { openDevToolsOnLaunch: 'yes' } as never);
-    },
-    /Invalid preferences update/,
-  );
+  await assert.rejects(async () => {
+    await preferences.set('developer', { openDevToolsOnLaunch: 'yes' } as never);
+  }, /Invalid preferences update/);
 
-  await assert.rejects(
-    async () => {
-      await preferences.set('hotkeys', {
-        navigation: {
-          home: 'Alt+H',
-          settings: 'Alt+H',
-          documents: 'Alt+D',
-          uploads: 'Alt+U',
-        },
-      } as never);
-    },
-    /Invalid preferences update/,
-  );
+  await assert.rejects(async () => {
+    await preferences.set('hotkeys', {
+      navigation: {
+        home: 'Alt+H',
+        settings: 'Alt+H',
+        documents: 'Alt+D',
+        uploads: 'Alt+U',
+      },
+    } as never);
+  }, /Invalid preferences update/);
 
   const resetPreferences = await preferences.reset();
   assert.deepEqual(resetPreferences, defaults);
@@ -317,11 +308,7 @@ test('commands service rejects duplicates and disabled commands', async () => {
     webContents: new EventEmitter(),
   };
   hotkeyService.attachToWindow(browserWindowStub as never);
-  browserWindowStub.webContents.emit(
-    'before-input-event',
-    { preventDefault() {} },
-    { control: true, key: 's' },
-  );
+  browserWindowStub.webContents.emit('before-input-event', { preventDefault() {} }, { control: true, key: 's' });
   assert.equal(ranSave, true);
 
   const menuService = createCommandsService({
@@ -351,13 +338,18 @@ test('documents service supports save, save as, open recent, dirty state, and ca
       lastOpenedPath: null,
     },
     filePath: path.join(directory, 'documents.json'),
-    validate: (value): value is { items: Array<{ filePath: string; lastOpenedAt: string; name: string }>; lastOpenedPath: string | null } =>
+    validate: (
+      value,
+    ): value is {
+      items: Array<{ filePath: string; lastOpenedAt: string; name: string }>;
+      lastOpenedPath: string | null;
+    } =>
       Boolean(
         value &&
-          typeof value === 'object' &&
-          Array.isArray((value as { items: unknown[] }).items) &&
-          (((value as { lastOpenedPath?: unknown }).lastOpenedPath === null) ||
-            typeof (value as { lastOpenedPath?: unknown }).lastOpenedPath === 'string'),
+        typeof value === 'object' &&
+        Array.isArray((value as { items: unknown[] }).items) &&
+        ((value as { lastOpenedPath?: unknown }).lastOpenedPath === null ||
+          typeof (value as { lastOpenedPath?: unknown }).lastOpenedPath === 'string'),
       ),
     version: 1,
   });

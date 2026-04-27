@@ -1,50 +1,17 @@
 import path from 'node:path';
 
 export const packageAliases = {
-  '@moritzbrantner/electron-commands/main': path.resolve(
-    __dirname,
-    'packages/electron-commands/src/main.ts',
-  ),
-  '@moritzbrantner/electron-commands/preload': path.resolve(
-    __dirname,
-    'packages/electron-commands/src/preload.ts',
-  ),
-  '@moritzbrantner/electron-commands/renderer': path.resolve(
-    __dirname,
-    'packages/electron-commands/src/renderer.ts',
-  ),
-  '@moritzbrantner/electron-commands/shared': path.resolve(
-    __dirname,
-    'packages/electron-commands/src/shared.ts',
-  ),
-  '@moritzbrantner/electron-documents/main': path.resolve(
-    __dirname,
-    'packages/electron-documents/src/main.ts',
-  ),
-  '@moritzbrantner/electron-documents/preload': path.resolve(
-    __dirname,
-    'packages/electron-documents/src/preload.ts',
-  ),
-  '@moritzbrantner/electron-documents/renderer': path.resolve(
-    __dirname,
-    'packages/electron-documents/src/renderer.ts',
-  ),
-  '@moritzbrantner/electron-documents/shared': path.resolve(
-    __dirname,
-    'packages/electron-documents/src/shared.ts',
-  ),
-  '@moritzbrantner/electron-json-store/main': path.resolve(
-    __dirname,
-    'packages/electron-json-store/src/main.ts',
-  ),
-  '@moritzbrantner/electron-json-store/shared': path.resolve(
-    __dirname,
-    'packages/electron-json-store/src/shared.ts',
-  ),
-  '@moritzbrantner/electron-preferences/main': path.resolve(
-    __dirname,
-    'packages/electron-preferences/src/main.ts',
-  ),
+  '@moritzbrantner/electron-commands/main': path.resolve(__dirname, 'packages/electron-commands/src/main.ts'),
+  '@moritzbrantner/electron-commands/preload': path.resolve(__dirname, 'packages/electron-commands/src/preload.ts'),
+  '@moritzbrantner/electron-commands/renderer': path.resolve(__dirname, 'packages/electron-commands/src/renderer.ts'),
+  '@moritzbrantner/electron-commands/shared': path.resolve(__dirname, 'packages/electron-commands/src/shared.ts'),
+  '@moritzbrantner/electron-documents/main': path.resolve(__dirname, 'packages/electron-documents/src/main.ts'),
+  '@moritzbrantner/electron-documents/preload': path.resolve(__dirname, 'packages/electron-documents/src/preload.ts'),
+  '@moritzbrantner/electron-documents/renderer': path.resolve(__dirname, 'packages/electron-documents/src/renderer.ts'),
+  '@moritzbrantner/electron-documents/shared': path.resolve(__dirname, 'packages/electron-documents/src/shared.ts'),
+  '@moritzbrantner/electron-json-store/main': path.resolve(__dirname, 'packages/electron-json-store/src/main.ts'),
+  '@moritzbrantner/electron-json-store/shared': path.resolve(__dirname, 'packages/electron-json-store/src/shared.ts'),
+  '@moritzbrantner/electron-preferences/main': path.resolve(__dirname, 'packages/electron-preferences/src/main.ts'),
   '@moritzbrantner/electron-preferences/preload': path.resolve(
     __dirname,
     'packages/electron-preferences/src/preload.ts',
@@ -53,22 +20,19 @@ export const packageAliases = {
     __dirname,
     'packages/electron-preferences/src/renderer.ts',
   ),
-  '@moritzbrantner/electron-preferences/shared': path.resolve(
+  '@moritzbrantner/electron-preferences/shared': path.resolve(__dirname, 'packages/electron-preferences/src/shared.ts'),
+  '@moritzbrantner/maps/styles.css': path.resolve(__dirname, '../platform-packages/packages/maps/styles.css'),
+  '@moritzbrantner/maps': path.resolve(__dirname, '../platform-packages/packages/maps/src/index.ts'),
+  '@moritzbrantner/auth-contract': path.resolve(__dirname, '../platform-packages/packages/auth-contract/src/index.ts'),
+  '@moritzbrantner/foundation-contract': path.resolve(
     __dirname,
-    'packages/electron-preferences/src/shared.ts',
+    '../platform-packages/packages/foundation-contract/src/index.ts',
   ),
-  '@moritzbrantner/maps/styles.css': path.resolve(
+  '@moritzbrantner/upload-playbook': path.resolve(
     __dirname,
-    '../platform-packages/packages/maps/styles.css',
+    '../platform-packages/packages/upload-playbook/src/index.ts',
   ),
-  '@moritzbrantner/maps': path.resolve(
-    __dirname,
-    '../platform-packages/packages/maps/src/index.ts',
-  ),
-  '@moritzbrantner/electron-window-state/main': path.resolve(
-    __dirname,
-    'packages/electron-window-state/src/main.ts',
-  ),
+  '@moritzbrantner/electron-window-state/main': path.resolve(__dirname, 'packages/electron-window-state/src/main.ts'),
   '@moritzbrantner/electron-window-state/shared': path.resolve(
     __dirname,
     'packages/electron-window-state/src/shared.ts',

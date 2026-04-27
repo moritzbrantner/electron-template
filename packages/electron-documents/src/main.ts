@@ -291,11 +291,7 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
     }
 
     const state = getInternalState(browserWindow);
-    const result = await options.dialogAdapter.showSaveDialog(
-      browserWindow,
-      state.filePath,
-      initialFileName,
-    );
+    const result = await options.dialogAdapter.showSaveDialog(browserWindow, state.filePath, initialFileName);
 
     if (result.canceled || !result.filePath) {
       const state = getInternalState(browserWindow);
@@ -316,8 +312,7 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
     setInternalState(browserWindow, {
       ...state,
       content,
-      statusMessage:
-        content === state.lastSavedContent ? 'All changes saved' : 'Unsaved changes',
+      statusMessage: content === state.lastSavedContent ? 'All changes saved' : 'Unsaved changes',
     });
     await broadcast(browserWindow);
   }

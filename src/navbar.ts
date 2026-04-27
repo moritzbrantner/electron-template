@@ -34,10 +34,7 @@ export function getRouteFromHash(hash: string): AppRoute {
   return match?.route ?? 'home';
 }
 
-export function createNavbar(
-  route: AppRoute,
-  hotkeys?: Partial<Record<AppRoute, string>>,
-): HTMLElement {
+export function createNavbar(route: AppRoute, hotkeys?: Partial<Record<AppRoute, string>>): HTMLElement {
   const navbar = document.createElement('nav');
   navbar.className = 'navbar';
 

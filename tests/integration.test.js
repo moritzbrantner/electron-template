@@ -36,10 +36,7 @@ test('desktop main process composes the reusable platform layer', () => {
 
 test('desktop smoke coverage uses the renamed smoke e2e suite', () => {
   const packageSource = fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8');
-  const smokeSource = fs.readFileSync(
-    path.resolve(__dirname, '../e2e/desktop-smoke.e2e.ts'),
-    'utf8',
-  );
+  const smokeSource = fs.readFileSync(path.resolve(__dirname, '../e2e/desktop-smoke.e2e.ts'), 'utf8');
 
   assert.match(packageSource, /desktop-smoke\.e2e\.ts/);
   assert.match(smokeSource, /desktop smoke/i);
