@@ -56,7 +56,7 @@
     "playwright": "^1.59.1",
     "tsup": "^8.5.0",
     "typescript": "~6.0.3",
-    "vite": "^5.4.21"
+    "vite": "^8.0.13"
   },
   "dependencies": {
     "@moritzbrantner/electron-commands": "workspace:*",
