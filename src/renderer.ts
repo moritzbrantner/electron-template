@@ -1,7 +1,5 @@
 import './index.css';
 
-import { createSharedButtonLabel } from '@moritzbrantner/ui';
-
 import type { CommandState } from '@moritzbrantner/electron-commands/renderer';
 import type { DocumentState } from '@moritzbrantner/electron-documents/renderer';
 
@@ -43,6 +41,11 @@ const appState = {
 };
 let mapsPlaygroundModule: typeof import('./maps-playground') | null = null;
 let mapsPlaygroundRenderVersion = 0;
+
+// @moritzbrantner/ui 1.x no longer exports the legacy 0.1 label helper; keep its output stable.
+function createSharedButtonLabel({ label }: { label: string }): string {
+  return `shared:${label}`;
+}
 
 function applyTheme(preferences: DesktopPreferences) {
   const theme = resolveThemePreference(preferences.appearance.theme, systemThemeQuery.matches);
