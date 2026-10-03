@@ -22,3 +22,4 @@ jobs:
       build_command: bun run build
       e2e_command: bun run test:e2e
       install_playwright: true
+      install_xvfb: true
