@@ -1,13 +1,13 @@
 # electron-template
 
-Reusable Electron desktop template with a typed main/preload boundary, publishable local packages, and app-level example workflows.
+Reusable Electron desktop scaffold with a typed main/preload boundary, publishable local packages, and smoke-tested app-level reference flows.
 
 ## What is included
 
 - Reusable local packages for commands, documents, JSON persistence, preferences, and window state.
 - Electron Forge + Vite for development, packaging, and distributable builds.
 - A preload-safe renderer API exposed on `window.desktop`.
-- A complete upload exemplar that stays app-specific while using the shared persistence layer.
+- A complete upload baseline that stays app-specific while using the shared persistence layer.
 - Unit, integration, and Playwright end-to-end coverage.
 
 ## Repository layout
@@ -19,7 +19,7 @@ Reusable Electron desktop template with a typed main/preload boundary, publishab
 - `src/platform/shared`: shared app-level types and validators.
 - `packages/*`: reusable Electron primitives and shared tooling packages intended for publishing.
 - `tests`: source-level unit and integration tests.
-- `e2e`: Playwright Electron tests and fixtures.
+- `e2e`: Playwright desktop smoke coverage and fixtures.
 
 ## Architecture
 
@@ -33,7 +33,10 @@ The shared packages provide reusable platform primitives:
 
 The app layer composes those packages in [create-desktop-platform.ts](/home/moenarch/moritzbrantner/electron-template/src/platform/main/create-desktop-platform.ts:163) and keeps product-specific behavior, like the upload queue, outside the reusable packages until it proves worth extracting.
 
+The standalone repo contract lives in [app.manifest.ts](/home/moenarch/moritzbrantner/electron-template/app.manifest.ts:1). It defines repo-level metadata such as `entryWorkspace`, deployment runtime, and the real shared package set. It does not imply an upstream sync relationship.
+
 See [docs/architecture.md](/home/moenarch/moritzbrantner/electron-template/docs/architecture.md:1) for the package boundary rules.
+See [SCAFFOLD_ALIGNMENT.md](./SCAFFOLD_ALIGNMENT.md) for the scaffold-family alignment contract.
 
 ## Storage
 
@@ -102,3 +105,10 @@ bun run make
 - Extract logic into `packages/*` only when it is generic enough to serve multiple apps.
 - Expose renderer-safe APIs only through preload bridges.
 - Prefer persisted typed state in the main process over renderer-owned local storage.
+
+## Update model
+
+- Adopt shared runtime updates through versioned packages.
+- Adopt CI and release changes through pinned reusable workflows once the shared workflow repo is in place.
+- Apply structural repo migrations through `@moritzbrantner/platform-upgrader`.
+- Do not use repo-dispatch or subtree-sync flows for ongoing alignment.

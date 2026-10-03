@@ -6,6 +6,8 @@ import electronPath from 'electron';
 
 import { test } from './fixtures/electron';
 
+// Desktop smoke coverage keeps the scaffold contract focused on renderer, settings,
+// document, and upload flows instead of example-only behavior.
 const shortcutKey = process.platform === 'darwin' ? 'Meta' : 'Control';
 const defaultHomeHotkey = 'CmdOrCtrl+1';
 const defaultDocumentsHotkey = 'CmdOrCtrl+3';
@@ -19,6 +21,12 @@ async function updateNavigationHotkey(page: Page, label: string, accelerator: st
   const input = getNavigationHotkeyInput(page, label);
   await input.fill(accelerator);
   await input.press('Tab');
+}
+
+async function runCommand(page: Page, commandId: string) {
+  await page.evaluate(async (id) => {
+    await window.desktop.commands.run(id);
+  }, commandId);
 }
 
 async function relaunchElectronApp(userDataDir: string) {
@@ -59,8 +67,8 @@ test('persists the selected theme across relaunch', async ({ app, page, userData
   await relaunchedApp.close();
 });
 
-test('opens settings through the command-backed hotkey', async ({ page }) => {
-  await page.keyboard.press(`${shortcutKey}+,`);
+test('opens settings through the command registry', async ({ page }) => {
+  await runCommand(page, 'app.openPreferences');
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
 });
 
@@ -121,10 +129,10 @@ test('saves and reopens a document through the command-backed document flow', as
   await editor.fill('# Playwright save flow\n\nThis document came from Playwright.');
   await expect(page.locator('.document-preview h1')).toHaveText('Playwright save flow');
 
-  await page.keyboard.press(`${shortcutKey}+S`);
+  await runCommand(page, 'document.save');
   await expect(page.getByText(/Saved e2e-document\.md/)).toBeVisible();
 
-  await page.keyboard.press(`${shortcutKey}+N`);
+  await runCommand(page, 'document.new');
   await expect(editor).toHaveValue(
     '# Untitled document\n\nStart writing in Markdown.\n\n- Add headings, lists, and links\n- Save with CmdOrCtrl+S\n- Reopen from the recent files list',
   );

@@ -3,13 +3,15 @@ import { splitDesktopHotkeyAccelerator } from './platform/shared/preferences';
 
 export const appRouteDefinitions: Array<{
   href: string;
+  hotkeyName?: 'home' | 'settings' | 'documents' | 'uploads';
   label: string;
   route: AppRoute;
 }> = [
-  { href: '#/', label: 'Home', route: 'home' },
-  { href: '#/settings', label: 'Settings', route: 'settings' },
-  { href: '#/documents', label: 'Documents', route: 'documents' },
-  { href: '#/uploads', label: 'Uploads', route: 'uploads' },
+  { href: '#/', hotkeyName: 'home', label: 'Home', route: 'home' },
+  { href: '#/settings', hotkeyName: 'settings', label: 'Settings', route: 'settings' },
+  { href: '#/documents', hotkeyName: 'documents', label: 'Documents', route: 'documents' },
+  { href: '#/uploads', hotkeyName: 'uploads', label: 'Uploads', route: 'uploads' },
+  { href: '#/maps', label: 'Maps', route: 'maps' },
 ];
 
 function createHotkeyPreview(accelerator: string) {
@@ -45,43 +47,6 @@ export function createNavbar(
 
   const actions = document.createElement('div');
   actions.className = 'navbar__actions';
-
-  const homeLink = document.createElement('a');
-  homeLink.href = '#/';
-  homeLink.textContent = 'Home';
-  if (route === 'home') {
-    homeLink.className = 'is-active';
-  }
-
-  const settingsLink = document.createElement('a');
-  settingsLink.href = '#/settings';
-  settingsLink.textContent = 'Settings';
-  if (route === 'settings') {
-    settingsLink.className = 'is-active';
-  }
-
-  const documentsLink = document.createElement('a');
-  documentsLink.href = '#/documents';
-  documentsLink.textContent = 'Documents';
-  if (route === 'documents') {
-    documentsLink.className = 'is-active';
-  }
-
-  const uploadsLink = document.createElement('a');
-  uploadsLink.href = '#/uploads';
-  uploadsLink.textContent = 'Uploads';
-  if (route === 'uploads') {
-    uploadsLink.className = 'is-active';
-  }
-
-  const mapsLink = document.createElement('a');
-  mapsLink.href = '#/maps';
-  mapsLink.textContent = 'Maps';
-  if (route === 'maps') {
-    mapsLink.className = 'is-active';
-  }
-
-  actions.append(homeLink, settingsLink, documentsLink, uploadsLink, mapsLink);
   appRouteDefinitions.forEach((definition) => {
     const link = document.createElement('a');
     link.href = definition.href;
@@ -94,7 +59,7 @@ export function createNavbar(
     label.textContent = definition.label;
     link.append(label);
 
-    const accelerator = hotkeys?.[definition.route];
+    const accelerator = definition.hotkeyName ? hotkeys?.[definition.hotkeyName] : undefined;
     if (accelerator) {
       link.append(createHotkeyPreview(accelerator));
     }

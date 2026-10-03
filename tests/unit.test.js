@@ -15,6 +15,7 @@ test('desktop renderer uses the preload-backed desktop platform APIs', () => {
   assert.match(source, /window\.desktop\.uploads\.startAll\(\)/);
   assert.match(source, /window\.desktop\.uploads\.retryUpload/);
   assert.match(source, /appState\.preferences\.hotkeys\.navigation/);
+  assert.match(source, /window\.location\.hash = targetRoute\.href/);
   assert.match(source, /Reset navigation hotkeys/);
   assert.match(source, /Each page shortcut must be unique\./);
   assert.match(source, /Built-in document shortcuts stay global/);
@@ -46,8 +47,38 @@ test('desktop navbar component provides app navigation links including documents
   assert.match(source, /Settings/);
   assert.match(source, /Documents/);
   assert.match(source, /Uploads/);
+  assert.match(source, /Maps/);
   assert.match(source, /#\/documents/);
+  assert.match(source, /#\/maps/);
   assert.match(source, /#\/uploads/);
   assert.match(source, /#\/settings/);
   assert.match(source, /is-active/);
+});
+
+test('standalone manifest uses repo-level entry workspace and current shared package set', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../app.manifest.ts'), 'utf8');
+
+  assert.match(source, /entryWorkspace: '\.'/);
+  assert.match(source, /@moritzbrantner\/maps/);
+  assert.match(source, /@moritzbrantner\/ui/);
+});
+
+test('direct-sync interfaces are removed from scripts and workflows', () => {
+  const packageSource = fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8');
+
+  assert.doesNotMatch(packageSource, /sync:monorepo/);
+  assert.equal(
+    fs.existsSync(path.resolve(__dirname, '../scripts/dispatch-monorepo-update.mjs')),
+    false,
+  );
+  assert.equal(
+    fs.existsSync(path.resolve(__dirname, '../.github/workflows/update-monorepo.yml')),
+    false,
+  );
+  assert.equal(
+    fs.existsSync(
+      path.resolve(__dirname, '../.github/workflows/notify-monorepo-subtree-sync.yml'),
+    ),
+    false,
+  );
 });
