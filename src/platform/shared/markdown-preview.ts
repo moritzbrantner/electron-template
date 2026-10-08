@@ -120,13 +120,20 @@ function formatEmphasis(text: string) {
   return fragments.join('');
 }
 
-function delimiterPairs(text: string) {
+function delimiterPairs(text: string, codeEnds: Map<number, number>) {
   const pairs = new Map<number, number>();
   const brackets: number[] = [];
   const parentheses: number[] = [];
   for (let index = 0; index < text.length; index += 1) {
     if (text[index] === '\\') {
       index += 1;
+      continue;
+    }
+    const codeEnd = codeEnds.get(index);
+    if (codeEnd !== undefined) {
+      let runEnd = index + 1;
+      while (text[runEnd] === '`') runEnd += 1;
+      index = codeEnd + runEnd - index - 1;
       continue;
     }
     if (parentheses.length > 0 && /\s/u.test(text[index - 1] ?? '')) {
@@ -172,8 +179,8 @@ function codeSpanEnds(text: string) {
 }
 
 function formatLinksAndCode(text: string, protect: (markup: string) => string, allowLinks = true) {
-  const pairs = delimiterPairs(text);
   const codeEnds = codeSpanEnds(text);
+  const pairs = delimiterPairs(text, codeEnds);
   const result: string[] = [];
   let cursor = 0;
   for (let index = 0; index < text.length; index += 1) {
@@ -273,10 +280,11 @@ function isParagraphBoundary(line: string, interruptingParagraph = false) {
   );
 }
 
-function renderMarkdownBlocks(markdown: string) {
+type MarkdownBlockPart = string | { markdown: string; depth: number };
+
+function* renderMarkdownBlockParts(markdown: string): Generator<MarkdownBlockPart> {
   const normalizedMarkdown = markdown.replaceAll('\r\n', '\n');
   const lines = normalizedMarkdown.split('\n');
-  const html: string[] = [];
 
   for (let index = 0; index < lines.length; ) {
     const line = lines[index];
@@ -303,9 +311,7 @@ function renderMarkdownBlocks(markdown: string) {
         index += 1;
       }
 
-      html.push(
-        `<pre class="markdown-code-block"${language ? ` data-language="${escapeHtml(language)}"` : ''}><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`,
-      );
+      yield `<pre class="markdown-code-block"${language ? ` data-language="${escapeHtml(language)}"` : ''}><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`;
       continue;
     }
 
@@ -313,13 +319,13 @@ function renderMarkdownBlocks(markdown: string) {
 
     if (headingMatch) {
       const level = headingMatch[1].length;
-      html.push(`<h${level}>${renderInlineMarkdown(headingMatch[2].trim())}</h${level}>`);
+      yield `<h${level}>${renderInlineMarkdown(headingMatch[2].trim())}</h${level}>`;
       index += 1;
       continue;
     }
 
     if (/^([*_-])(?:\s*\1){2,}\s*$/u.test(trimmedLine)) {
-      html.push('<hr />');
+      yield '<hr />';
       index += 1;
       continue;
     }
@@ -328,11 +334,26 @@ function renderMarkdownBlocks(markdown: string) {
       const quoteLines: string[] = [];
 
       while (index < lines.length && /^>\s?/u.test(lines[index])) {
-        quoteLines.push(lines[index].replace(/^>\s?/u, ''));
+        quoteLines.push(lines[index]);
         index += 1;
       }
 
-      html.push(`<blockquote>${renderMarkdownBlocks(quoteLines.join('\n'))}</blockquote>`);
+      // Consume the shared quote prefix in one pass, including very deep quotes.
+      const depth = quoteLines.reduce((minimumDepth, quoteLine) => {
+        const prefix = quoteLine.match(/^(?:>\s?)+/u)?.[0] ?? '';
+        let quoteDepth = 0;
+        for (const character of prefix) if (character === '>') quoteDepth += 1;
+        return Math.min(minimumDepth, quoteDepth);
+      }, Number.POSITIVE_INFINITY);
+      const strippedLines = quoteLines.map((quoteLine) => {
+        let offset = 0;
+        for (let level = 0; level < depth; level += 1) {
+          offset += 1;
+          if (/\s/u.test(quoteLine[offset] ?? '')) offset += 1;
+        }
+        return quoteLine.slice(offset);
+      });
+      yield { markdown: strippedLines.join('\n'), depth };
       continue;
     }
 
@@ -357,7 +378,7 @@ function renderMarkdownBlocks(markdown: string) {
         items.push(`<li>${renderInlineMarkdown(itemLines.join('\n'))}</li>`);
       }
 
-      html.push(`<ul>${items.join('')}</ul>`);
+      yield `<ul>${items.join('')}</ul>`;
       continue;
     }
 
@@ -382,7 +403,7 @@ function renderMarkdownBlocks(markdown: string) {
         items.push(`<li>${renderInlineMarkdown(itemLines.join('\n'))}</li>`);
       }
 
-      html.push(`<ol start="${Number(orderedListMatch[1])}">${items.join('')}</ol>`);
+      yield `<ol start="${Number(orderedListMatch[1])}">${items.join('')}</ol>`;
       continue;
     }
 
@@ -394,9 +415,29 @@ function renderMarkdownBlocks(markdown: string) {
       index += 1;
     }
 
-    html.push(`<p>${renderInlineMarkdown(paragraphLines.join('\n'))}</p>`);
+    yield `<p>${renderInlineMarkdown(paragraphLines.join('\n'))}</p>`;
   }
+}
 
+function renderMarkdownBlocks(markdown: string) {
+  const html: string[] = [];
+  const frames = [{ parts: renderMarkdownBlockParts(markdown), closing: '' }];
+  while (frames.length > 0) {
+    const frame = frames[frames.length - 1];
+    const next = frame.parts.next();
+    if (next.done) {
+      html.push(frame.closing);
+      frames.pop();
+    } else if (typeof next.value === 'string') {
+      html.push(next.value);
+    } else {
+      html.push('<blockquote>'.repeat(next.value.depth));
+      frames.push({
+        parts: renderMarkdownBlockParts(next.value.markdown),
+        closing: '</blockquote>'.repeat(next.value.depth),
+      });
+    }
+  }
   return html.join('');
 }
 

@@ -1,3 +1,4 @@
+import { wrapMarkdownText } from '../../src/platform/shared/markdown-editing.ts';
 import assert from 'node:assert/strict';
 import { test } from 'bun:test';
 import { desktopDocumentSerializer } from '../../src/platform/shared/document-serializer.ts';
@@ -243,4 +244,36 @@ test('non-one ordered starts require a block boundary after prose', () => {
     renderMarkdownPreview('The finalists are\n1. Alice'),
     '<p>The finalists are</p><ol start="1"><li>Alice</li></ol>',
   );
+});
+
+test('link labels treat unmatched code-span brackets as literal content', () => {
+  assert.equal(
+    renderMarkdownPreview('[foo `]` bar](https://example.com)'),
+    '<p><a href="https://example.com" target="_blank" rel="noreferrer">foo <code>]</code> bar</a></p>',
+  );
+});
+
+test('deep blockquotes render without recursive stack growth', () => {
+  const depth = 50000;
+  assert.equal(
+    renderMarkdownPreview('>'.repeat(depth) + ' text'),
+    '<blockquote>'.repeat(depth) + '<p>text</p>' + '</blockquote>'.repeat(depth),
+  );
+  assert.equal(
+    renderMarkdownPreview('> ```\n> > literal code\n> ```'),
+    '<blockquote><pre class="markdown-code-block"><code>&gt; literal code</code></pre></blockquote>',
+  );
+});
+
+test('toolbar emphasis leaves selected whitespace outside the delimiters', () => {
+  for (const marker of ['*', '**']) {
+    for (const selected of ['word ', ' word', '\tword \n']) {
+      const wrapped = wrapMarkdownText(selected, 0, selected.length, marker, marker, 'fallback');
+      assert.equal(wrapped.content.slice(wrapped.selectionStart, wrapped.selectionEnd), 'word');
+      assert.match(
+        renderMarkdownPreview(wrapped.content),
+        marker === '**' ? /<strong>word<\/strong>/ : /<em>word<\/em>/,
+      );
+    }
+  }
 });

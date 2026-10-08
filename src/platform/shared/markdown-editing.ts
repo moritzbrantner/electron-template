@@ -1,3 +1,24 @@
+export function wrapMarkdownText(
+  text: string,
+  start: number,
+  end: number,
+  prefix: string,
+  suffix: string,
+  fallback: string,
+) {
+  const selected = text.slice(start, end);
+  const leading = selected.match(/^\s*/u)?.[0] ?? '';
+  const trailing = selected.slice(leading.length).match(/\s*$/u)?.[0] ?? '';
+  const content = selected.slice(leading.length, selected.length - trailing.length) || fallback;
+  const replacement = leading + prefix + content + suffix + trailing;
+  const selectionStart = start + leading.length + prefix.length;
+  return {
+    content: text.slice(0, start) + replacement + text.slice(end),
+    selectionStart,
+    selectionEnd: selectionStart + content.length,
+  };
+}
+
 export function insertCodeFence(text: string, start: number, end: number) {
   const selected = text.slice(start, end) || 'code block';
   let longestRun = 0;

@@ -1,5 +1,5 @@
 import './index.css';
-import { insertCodeFence, insertMarkdownLink as insertMarkdownLinkText, prefixMarkdownLines } from './platform/shared/markdown-editing';
+import { insertCodeFence, insertMarkdownLink as insertMarkdownLinkText, prefixMarkdownLines, wrapMarkdownText } from './platform/shared/markdown-editing';
 import { renderMarkdownPreview } from './platform/shared/markdown-preview';
 
 import { createSharedButtonLabel } from '@moritzbrantner/ui';
@@ -81,22 +81,8 @@ function wrapMarkdownSelection(
   suffix: string,
   fallbackText: string,
 ) {
-  const selectionStart = editor.selectionStart;
-  const selectionEnd = editor.selectionEnd;
-  const selectedText = editor.value.slice(selectionStart, selectionEnd) || fallbackText;
-  const nextValue =
-    editor.value.slice(0, selectionStart) +
-    prefix +
-    selectedText +
-    suffix +
-    editor.value.slice(selectionEnd);
-
-  updateDocumentEditorValue(
-    editor,
-    nextValue,
-    selectionStart + prefix.length,
-    selectionStart + prefix.length + selectedText.length,
-  );
+  const inserted = wrapMarkdownText(editor.value, editor.selectionStart, editor.selectionEnd, prefix, suffix, fallbackText);
+  updateDocumentEditorValue(editor, inserted.content, inserted.selectionStart, inserted.selectionEnd);
 }
 
 function prefixMarkdownSelection(editor: HTMLTextAreaElement, prefix: string, fallbackText: string) {
