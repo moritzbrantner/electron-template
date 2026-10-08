@@ -26,7 +26,14 @@ test('Markdown link queries are escaped once and unsafe schemes stay unlinked', 
 
 test('inline formatting preserves link destinations and literal token-like text', () => {
   assert.match(renderMarkdownPreview('[x](https://example.com/a*b*c)'), /href="https:\/\/example.com\/a\*b\*c"/);
-  assert.equal(renderMarkdownPreview('__CODE_TOKEN_0__ and `code`'), '<p>__CODE_TOKEN_0__ and <code>code</code></p>');
+  assert.equal(
+    renderMarkdownPreview('__CODE_TOKEN_0__ and `code`'),
+    '<p><strong>CODE_TOKEN_0</strong> and <code>code</code></p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('\uE000INLINE_TOKEN:0\uE001 and `code`'),
+    '<p>\uE000INLINE_TOKEN:0\uE001 and <code>code</code></p>',
+  );
 });
 
 test('ordered list previews retain their starting number', () => {
@@ -179,4 +186,27 @@ test('large nested emphasis renders every delimiter pair', () => {
     renderMarkdownPreview(`${delimiters}x${delimiters}`),
     `<p>${'<strong>'.repeat(2500)}x${'</strong>'.repeat(2500)}</p>`,
   );
+});
+
+test('inline links separate optional titles from their destination', () => {
+  for (const title of ['"Example"', "'Example'", '(Example)']) {
+    assert.equal(
+      renderMarkdownPreview(`[site](https://example.com ${title})`),
+      '<p><a href="https://example.com" title="Example" target="_blank" rel="noreferrer">site</a></p>',
+    );
+  }
+  assert.match(
+    renderMarkdownPreview('[site](<https://example.com> "A & B")'),
+    /href="https:\/\/example.com" title="A &amp; B"/,
+  );
+});
+
+test('underscore emphasis preserves intraword underscores', () => {
+  assert.equal(
+    renderMarkdownPreview('_italic_ and __bold__ and ___both___'),
+    '<p><em>italic</em> and <strong>bold</strong> and <em><strong>both</strong></em></p>',
+  );
+  assert.equal(renderMarkdownPreview('one_two_three and one__two__three'), '<p>one_two_three and one__two__three</p>');
+  assert.equal(renderMarkdownPreview('(_italic_)'), '<p>(<em>italic</em>)</p>');
+  assert.equal(renderMarkdownPreview('\\_literal\\_'), '<p>_literal_</p>');
 });

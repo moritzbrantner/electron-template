@@ -13,13 +13,43 @@ function sanitizeMarkdownHref(href: string) {
   return trimmedHref;
 }
 
+function parseLinkDestination(text: string) {
+  let destination: string;
+  let remainder: string;
+  if (text.startsWith('&lt;')) {
+    const end = text.indexOf('&gt;', 4);
+    if (end === -1) return null;
+    destination = text.slice(4, end);
+    remainder = text.slice(end + 4).trim();
+  } else {
+    const end = text.search(/\s/u);
+    destination = end === -1 ? text : text.slice(0, end);
+    remainder = end === -1 ? '' : text.slice(end).trim();
+  }
+  let title: string | null = null;
+  if (remainder) {
+    const delimiters = [
+      ['&quot;', '&quot;'],
+      ["'", "'"],
+      ['(', ')'],
+    ];
+    const pair = delimiters.find(
+      ([open, close]) =>
+        remainder.startsWith(open) && remainder.endsWith(close) && remainder.length >= open.length + close.length,
+    );
+    if (!pair) return null;
+    title = remainder.slice(pair[0].length, -pair[1].length);
+  }
+  return { destination, title };
+}
+
 function formatEmphasis(text: string) {
   const fragments: string[] = [];
   const openers: { marker: string; width: number; fragment: number }[] = [];
   let cursor = 0;
   for (let index = 0; index < text.length; ) {
     const marker = text[index];
-    if (marker !== '*' && marker !== '~') {
+    if (marker !== '*' && marker !== '_' && marker !== '~') {
       index += 1;
       continue;
     }
@@ -27,8 +57,16 @@ function formatEmphasis(text: string) {
     while (text[end] === marker) end += 1;
     fragments.push(text.slice(cursor, index));
     let remaining = end - index;
-    const canClose = index > 0 && !/\s/u.test(text[index - 1]);
-    const canOpen = end < text.length && !/\s/u.test(text[end]);
+    const before = text[index - 1];
+    const after = text[end];
+    const beforeSpace = before === undefined || /\s/u.test(before);
+    const afterSpace = after === undefined || /\s/u.test(after);
+    const beforePunctuation = before !== undefined && /[\p{P}\p{S}]/u.test(before);
+    const afterPunctuation = after !== undefined && /[\p{P}\p{S}]/u.test(after);
+    const leftFlanking = !afterSpace && (!afterPunctuation || beforeSpace || beforePunctuation);
+    const rightFlanking = !beforeSpace && (!beforePunctuation || afterSpace || afterPunctuation);
+    const canClose = marker === '_' ? rightFlanking && (!leftFlanking || afterPunctuation) : rightFlanking;
+    const canOpen = marker === '_' ? leftFlanking && (!rightFlanking || beforePunctuation) : leftFlanking;
     if (canClose) {
       while (openers.length > 0) {
         const opener = openers[openers.length - 1];
@@ -43,7 +81,7 @@ function formatEmphasis(text: string) {
     if (canOpen) {
       while (remaining >= (marker === '~' ? 2 : 1)) {
         // An odd asterisk run opens emphasis around its inner strong pairs.
-        const width = marker === '*' && remaining % 2 === 1 ? 1 : 2;
+        const width = marker !== '~' && remaining % 2 === 1 ? 1 : 2;
         openers.push({ marker, width, fragment: fragments.length });
         fragments.push(marker.repeat(width));
         remaining -= width;
@@ -126,11 +164,17 @@ function formatLinksAndCode(text: string, protect: (markup: string) => string, a
     if (labelEnd === undefined || text[labelEnd + 1] !== '(') continue;
     const end = pairs.get(labelEnd + 1);
     if (end === undefined) continue;
-    const safeHref = sanitizeMarkdownHref(text.slice(labelEnd + 2, end).replace(/\\([()\\])/gu, '$1'));
+    const link = parseLinkDestination(text.slice(labelEnd + 2, end));
+    if (!link) continue;
+    const safeHref = sanitizeMarkdownHref(link.destination.replace(/\\([()\\])/gu, '$1'));
     const label = formatEmphasis(formatLinksAndCode(text.slice(index + 1, labelEnd), protect, false));
     result.push(
       text.slice(cursor, index),
-      safeHref ? protect(`<a href="${safeHref}" target="_blank" rel="noreferrer">${label}</a>`) : label,
+      safeHref
+        ? protect(
+            `<a href="${safeHref}"${link.title === null ? '' : ` title="${link.title}"`} target="_blank" rel="noreferrer">${label}</a>`,
+          )
+        : label,
     );
     cursor = end + 1;
     index = end;
@@ -140,7 +184,7 @@ function formatLinksAndCode(text: string, protect: (markup: string) => string, a
 }
 
 function restoreMarkup(html: string, tokens: string[], prefix: string) {
-  const tokenPattern = new RegExp(`${prefix}(\\d+)__`, 'gu');
+  const tokenPattern = new RegExp(`${prefix}(\\d+)\uE001`, 'gu');
   const pending: { value: string; literal: boolean }[] = [{ value: html, literal: false }];
   const result: string[] = [];
   while (pending.length > 0) {
@@ -164,11 +208,11 @@ function restoreMarkup(html: string, tokens: string[], prefix: string) {
 
 function renderInlineMarkdown(text: string) {
   let html = escapeHtml(text);
-  let prefix = '__INLINE_TOKEN_';
-  while (html.includes(prefix)) prefix += '_';
+  let prefix = '\uE000INLINE_TOKEN:';
+  while (html.includes(prefix)) prefix += ':';
   const tokens: string[] = [];
   const protect = (markup: string) => {
-    const token = `${prefix}${tokens.length}__`;
+    const token = `${prefix}${tokens.length}\uE001`;
     tokens.push(markup);
     return token;
   };
