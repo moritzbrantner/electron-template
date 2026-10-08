@@ -13,11 +13,40 @@ function sanitizeMarkdownHref(href: string) {
   return trimmedHref;
 }
 
-function formatEmphasis(text: string) {
-  return text
-    .replace(/\*\*([^*]+)\*\*/gu, '<strong>$1</strong>')
-    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/gu, '$1<em>$2</em>')
-    .replace(/~~([^~]+)~~/gu, '<del>$1</del>');
+function formatEmphasis(text: string, protect: (markup: string) => string) {
+  let previous: string;
+  do {
+    previous = text;
+    text = text
+      .replace(/\*\*([^*]+)\*\*/gu, (_match, content: string) => protect(`<strong>${content}</strong>`))
+      .replace(/(?<!\*)\*([^*\n]+)\*/gu, (_match, content: string) => protect(`<em>${content}</em>`))
+      .replace(/~~([^~]+)~~/gu, (_match, content: string) => protect(`<del>${content}</del>`));
+  } while (text !== previous);
+  return text;
+}
+
+function formatLinks(text: string, protect: (markup: string) => string) {
+  const opener = /\[([^\]]+)\]\(/gu;
+  let result = '';
+  let cursor = 0;
+  for (let match = opener.exec(text); match; match = opener.exec(text)) {
+    const destinationStart = opener.lastIndex;
+    let depth = 1;
+    let end = destinationStart;
+    for (; end < text.length; end += 1) {
+      if (text[end] === '(') depth += 1;
+      if (text[end] === ')') depth -= 1;
+      if (depth === 0) break;
+    }
+    if (depth !== 0) continue;
+    const safeHref = sanitizeMarkdownHref(text.slice(destinationStart, end));
+    result += text.slice(cursor, match.index);
+    const label = formatEmphasis(match[1], protect);
+    result += safeHref ? protect(`<a href="${safeHref}" target="_blank" rel="noreferrer">${label}</a>`) : label;
+    cursor = end + 1;
+    opener.lastIndex = cursor;
+  }
+  return result + text.slice(cursor);
 }
 
 function renderInlineMarkdown(text: string) {
@@ -31,13 +60,8 @@ function renderInlineMarkdown(text: string) {
     return token;
   };
   html = html.replace(/`([^`\n]+)`/gu, (_match, code: string) => protect(`<code>${code}</code>`));
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/gu, (_match, label: string, href: string) => {
-    const safeHref = sanitizeMarkdownHref(href);
-    return safeHref
-      ? protect(`<a href="${safeHref}" target="_blank" rel="noreferrer">${formatEmphasis(label)}</a>`)
-      : label;
-  });
-  html = formatEmphasis(html);
+  html = formatLinks(html, protect);
+  html = formatEmphasis(html, protect);
   // Links can contain protected code spans, so restore the outer link before its inner code.
   for (let index = tokens.length - 1; index >= 0; index -= 1) {
     html = html.replaceAll(`${prefix}${index}__`, tokens[index]);
@@ -71,12 +95,14 @@ export function renderMarkdownPreview(markdown: string) {
       continue;
     }
 
-    if (line.startsWith('```')) {
-      const language = line.slice(3).trim();
+    const fenceMatch = line.match(/^(`{3,})([^`]*)$/u);
+    if (fenceMatch) {
+      const language = fenceMatch[2].trim();
+      const closingFence = new RegExp('^`{' + fenceMatch[1].length + ',}\\s*$', 'u');
       const codeLines: string[] = [];
       index += 1;
 
-      while (index < lines.length && !lines[index].startsWith('```')) {
+      while (index < lines.length && !closingFence.test(lines[index])) {
         codeLines.push(lines[index]);
         index += 1;
       }

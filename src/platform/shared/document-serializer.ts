@@ -6,7 +6,7 @@ export const desktopDocumentSerializer: DocumentSerializer = {
       throw new Error(`Invalid markdown payload in ${filePath}`);
     }
 
-    if (filePath.toLowerCase().endsWith('.desktop.json')) {
+    if (filePath.toLowerCase().endsWith('.json')) {
       const parsed: unknown = JSON.parse(raw);
       if (
         typeof parsed !== 'object' ||
@@ -18,18 +18,14 @@ export const desktopDocumentSerializer: DocumentSerializer = {
       }
       return { content: parsed.content };
     }
-    return { content: raw.replaceAll('\r\n', '\n') };
+    return { content: raw };
   },
   extension: 'md',
   name: 'Markdown document',
   serialize(value, filePath) {
-    if (filePath?.toLowerCase().endsWith('.desktop.json')) {
+    if (filePath?.toLowerCase().endsWith('.json')) {
       return `${JSON.stringify({ content: value.content, version: 1 }, null, 2)}\n`;
     }
-    if (value.content.length === 0) {
-      return '';
-    }
-
-    return value.content.endsWith('\n') ? value.content : `${value.content}\n`;
+    return value.content;
   },
 };

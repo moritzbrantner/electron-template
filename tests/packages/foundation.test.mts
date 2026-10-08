@@ -393,14 +393,17 @@ test('documents service supports save, save as, open recent, dirty state, and ca
 
   await service.updateDraft('hello again');
   await service.save({} as never);
-  assert.equal(await readFile(documentFilePath, 'utf8'), 'hello again\n');
+  assert.equal(await readFile(documentFilePath, 'utf8'), 'hello again');
+  await service.openRecent(documentFilePath, {} as never);
+  assert.equal((await service.getState()).content, 'hello again');
 
   await writeFile(recentFilePath, 'from recent', 'utf8');
   await service.openRecent(recentFilePath, {} as never);
   assert.equal((await service.getState()).content, 'from recent');
   assert.equal((await service.listRecent()).length, 2);
 
-  const legacyPath = path.join(directory, 'legacy.desktop.json');
+  for (const suffix of ['desktop.json', 'json']) {
+  const legacyPath = path.join(directory, `legacy.${suffix}`);
   await writeFile(legacyPath, JSON.stringify({ content: '# Legacy', version: 1 }), 'utf8');
   await service.openRecent(legacyPath, {} as never);
   assert.equal((await service.getState()).content, '# Legacy');
@@ -409,6 +412,7 @@ test('documents service supports save, save as, open recent, dirty state, and ca
   assert.equal(JSON.parse(await readFile(legacyPath, 'utf8')).content, '# Edited legacy');
   await service.openRecent(legacyPath, {} as never);
   assert.equal((await service.getState()).content, '# Edited legacy');
+  }
 
 
   const cancelService = createDocumentsService({

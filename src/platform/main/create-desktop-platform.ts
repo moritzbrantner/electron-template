@@ -127,7 +127,7 @@ function createDocumentDialogAdapter(storagePath: string): DocumentDialogAdapter
             extensions: ['md', 'markdown'],
             name: 'Markdown documents',
           },
-          { extensions: ['desktop.json'], name: 'Legacy desktop documents' },
+          { extensions: ['desktop.json', 'json'], name: 'Legacy desktop documents' },
         ],
         properties: ['openFile'],
       });
