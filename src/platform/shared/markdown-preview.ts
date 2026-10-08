@@ -124,6 +124,7 @@ function delimiterPairs(text: string, codeEnds: Map<number, number>) {
   const pairs = new Map<number, number>();
   const brackets: number[] = [];
   const parentheses: number[] = [];
+  let nextAngleEnd = text.indexOf('&gt;');
   for (let index = 0; index < text.length; index += 1) {
     if (text[index] === '\\') {
       index += 1;
@@ -135,6 +136,15 @@ function delimiterPairs(text: string, codeEnds: Map<number, number>) {
       while (text[runEnd] === '`') runEnd += 1;
       index = codeEnd + runEnd - index - 1;
       continue;
+    }
+    if (parentheses.length > 0 && text.startsWith('&lt;', index) && text[index - 1] === '(') {
+      while (nextAngleEnd !== -1 && nextAngleEnd < index) {
+        nextAngleEnd = text.indexOf('&gt;', nextAngleEnd + 4);
+      }
+      if (nextAngleEnd !== -1) {
+        index = nextAngleEnd + 3;
+        continue;
+      }
     }
     if (parentheses.length > 0 && /\s/u.test(text[index - 1] ?? '')) {
       const quote = text.startsWith('&quot;', index) ? '&quot;' : text[index] === "'" ? "'" : null;
@@ -384,7 +394,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
     const listMatch = line.match(/^([-*+]|\d+\.)\s+(.*)$/u);
     if (listMatch) {
       const ordered = /^\d/u.test(listMatch[1]);
-      const itemPattern = ordered ? /^\d+\.\s+(.*)$/u : /^[-*+]\s+(.*)$/u;
+      const itemPattern = ordered ? /^\d+\.\s+(.*)$/u : new RegExp(`^[${listMatch[1]}]\\s+(.*)$`, 'u');
       const items: string[][] = [];
       while (index < lines.length) {
         const match = lines[index].match(itemPattern);
@@ -406,7 +416,9 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
             itemLines.push('');
           } else if (indentation >= contentIndent) {
             itemLines.push(continuation.slice(contentIndent));
-          } else if (!isParagraphBoundary(continuation.trimStart())) {
+          } else if (itemPattern.test(continuation)) {
+            break;
+          } else if (!isParagraphBoundary(continuation.trimStart(), true)) {
             itemLines.push(continuation.trimStart());
           } else {
             break;

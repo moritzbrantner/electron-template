@@ -311,3 +311,28 @@ test('setext underlines form headings while standalone thematic breaks remain ru
   assert.equal(renderMarkdownPreview('First line\nsecond line\n---'), '<h2>First line second line</h2>');
   assert.equal(renderMarkdownPreview('---'), '<hr />');
 });
+
+test('non-one ordered markers remain lazy list-item paragraph continuations', () => {
+  assert.equal(renderMarkdownPreview('- The finalists are\n2. Alice'), '<ul><li>The finalists are 2. Alice</li></ul>');
+  assert.equal(
+    renderMarkdownPreview('- The finalists are\n1. Alice'),
+    '<ul><li>The finalists are</li></ul><ol start="1"><li>Alice</li></ol>',
+  );
+});
+
+test('changing unordered bullet markers starts separate lists', () => {
+  assert.equal(
+    renderMarkdownPreview('- first\n+ second\n* third'),
+    '<ul><li>first</li></ul><ul><li>second</li></ul><ul><li>third</li></ul>',
+  );
+  assert.equal(renderMarkdownPreview('- first\n- second'), '<ul><li>first</li><li>second</li></ul>');
+});
+
+test('angle-bracket link destinations allow literal unbalanced parentheses', () => {
+  for (const path of ['a(b', 'a)b', 'a(b)c']) {
+    assert.equal(
+      renderMarkdownPreview(`[x](<https://example.com/${path}>)`),
+      `<p><a href="https://example.com/${path}" target="_blank" rel="noreferrer">x</a></p>`,
+    );
+  }
+});
