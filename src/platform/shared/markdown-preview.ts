@@ -13,34 +13,35 @@ function sanitizeMarkdownHref(href: string) {
   return trimmedHref;
 }
 
-function renderInlineMarkdown(text: string) {
-  const codeTokens: string[] = [];
-
-  let html = escapeHtml(text).replace(/`([^`\n]+)`/gu, (_match, code: string) => {
-    const token = `__CODE_TOKEN_${codeTokens.length}__`;
-    codeTokens.push(`<code>${code}</code>`);
-    return token;
-  });
-
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/gu, (_match, label: string, href: string) => {
-    const safeHref = sanitizeMarkdownHref(href);
-
-    if (!safeHref) {
-      return label;
-    }
-
-    return `<a href="${safeHref}" target="_blank" rel="noreferrer">${label}</a>`;
-  });
-
-  html = html
+function formatEmphasis(text: string) {
+  return text
     .replace(/\*\*([^*]+)\*\*/gu, '<strong>$1</strong>')
     .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/gu, '$1<em>$2</em>')
     .replace(/~~([^~]+)~~/gu, '<del>$1</del>');
+}
 
-  codeTokens.forEach((token, index) => {
-    html = html.replace(`__CODE_TOKEN_${index}__`, token);
+function renderInlineMarkdown(text: string) {
+  let html = escapeHtml(text);
+  let prefix = '__INLINE_TOKEN_';
+  while (html.includes(prefix)) prefix += '_';
+  const tokens: string[] = [];
+  const protect = (markup: string) => {
+    const token = `${prefix}${tokens.length}__`;
+    tokens.push(markup);
+    return token;
+  };
+  html = html.replace(/`([^`\n]+)`/gu, (_match, code: string) => protect(`<code>${code}</code>`));
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/gu, (_match, label: string, href: string) => {
+    const safeHref = sanitizeMarkdownHref(href);
+    return safeHref
+      ? protect(`<a href="${safeHref}" target="_blank" rel="noreferrer">${formatEmphasis(label)}</a>`)
+      : label;
   });
-
+  html = formatEmphasis(html);
+  // Links can contain protected code spans, so restore the outer link before its inner code.
+  for (let index = tokens.length - 1; index >= 0; index -= 1) {
+    html = html.replaceAll(`${prefix}${index}__`, tokens[index]);
+  }
   return html;
 }
 
@@ -139,7 +140,7 @@ export function renderMarkdownPreview(markdown: string) {
       continue;
     }
 
-    const orderedListMatch = line.match(/^\d+\.\s+(.*)$/u);
+    const orderedListMatch = line.match(/^(\d+)\.\s+(.*)$/u);
 
     if (orderedListMatch) {
       const items: string[] = [];
@@ -155,7 +156,7 @@ export function renderMarkdownPreview(markdown: string) {
         index += 1;
       }
 
-      html.push(`<ol>${items.join('')}</ol>`);
+      html.push(`<ol start="${Number(orderedListMatch[1])}">${items.join('')}</ol>`);
       continue;
     }
 

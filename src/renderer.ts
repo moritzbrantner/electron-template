@@ -1,4 +1,5 @@
 import './index.css';
+import { insertCodeFence } from './platform/shared/markdown-editing';
 import { renderMarkdownPreview } from './platform/shared/markdown-preview';
 
 import { createSharedButtonLabel } from '@moritzbrantner/ui';
@@ -816,7 +817,8 @@ function createDocumentsScreen() {
     {
       label: 'Code',
       run: () => {
-        wrapMarkdownSelection(editor, '```\n', '\n```', 'code block');
+        const inserted = insertCodeFence(editor.value, editor.selectionStart, editor.selectionEnd);
+        updateDocumentEditorValue(editor, inserted.content, inserted.selectionStart, inserted.selectionEnd);
       },
     },
     {
