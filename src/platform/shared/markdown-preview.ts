@@ -280,9 +280,9 @@ function isParagraphBoundary(line: string, interruptingParagraph = false) {
   );
 }
 
-type MarkdownBlockPart = string | { markdown: string; depth: number };
+type MarkdownBlockPart = string | { markdown: string; opening: string; closing: string; tightParagraphs?: boolean };
 
-function* renderMarkdownBlockParts(markdown: string): Generator<MarkdownBlockPart> {
+function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): Generator<MarkdownBlockPart> {
   const normalizedMarkdown = markdown.replaceAll('\r\n', '\n');
   const lines = normalizedMarkdown.split('\n');
 
@@ -333,8 +333,28 @@ function* renderMarkdownBlockParts(markdown: string): Generator<MarkdownBlockPar
     if (/^>\s?/u.test(line)) {
       const quoteLines: string[] = [];
 
-      while (index < lines.length && /^>\s?/u.test(lines[index])) {
-        quoteLines.push(lines[index]);
+      let lazyParagraph = false;
+      let quoteFenceWidth = 0;
+      while (index < lines.length) {
+        const quoteLine = lines[index];
+        if (/^>\s?/u.test(quoteLine)) {
+          quoteLines.push(quoteLine);
+          const content = quoteLine.replace(/^(?:>\s?)+/u, '');
+          const fence = content.match(/^(`{3,})([^`]*)$/u);
+          if (quoteFenceWidth > 0) {
+            if (fence && fence[1].length >= quoteFenceWidth && !fence[2].trim()) quoteFenceWidth = 0;
+            lazyParagraph = false;
+          } else if (fence) {
+            quoteFenceWidth = fence[1].length;
+            lazyParagraph = false;
+          } else {
+            lazyParagraph = !isParagraphBoundary(content, true) && !/^(?:=+|-+)\s*$/u.test(content);
+          }
+        } else if (lazyParagraph && !isParagraphBoundary(quoteLine, true)) {
+          quoteLines.push('> ' + quoteLine);
+        } else {
+          break;
+        }
         index += 1;
       }
 
@@ -353,69 +373,78 @@ function* renderMarkdownBlockParts(markdown: string): Generator<MarkdownBlockPar
         }
         return quoteLine.slice(offset);
       });
-      yield { markdown: strippedLines.join('\n'), depth };
+      yield {
+        markdown: strippedLines.join('\n'),
+        opening: '<blockquote>'.repeat(depth),
+        closing: '</blockquote>'.repeat(depth),
+      };
       continue;
     }
 
-    const unorderedListMatch = line.match(/^([-*+])\s+(.*)$/u);
-
-    if (unorderedListMatch) {
-      const items: string[] = [];
-
+    const listMatch = line.match(/^([-*+]|\d+\.)\s+(.*)$/u);
+    if (listMatch) {
+      const ordered = /^\d/u.test(listMatch[1]);
+      const itemPattern = ordered ? /^\d+\.\s+(.*)$/u : /^[-*+]\s+(.*)$/u;
+      const items: string[][] = [];
       while (index < lines.length) {
-        const match = lines[index].match(/^([-*+])\s+(.*)$/u);
-
-        if (!match) {
-          break;
-        }
-
-        const itemLines = [match[2]];
-        index += 1;
-        while (index < lines.length && !isParagraphBoundary(lines[index].trimStart())) {
-          itemLines.push(lines[index].trimStart());
-          index += 1;
-        }
-        items.push(`<li>${renderInlineMarkdown(itemLines.join('\n'))}</li>`);
-      }
-
-      yield `<ul>${items.join('')}</ul>`;
-      continue;
-    }
-
-    const orderedListMatch = line.match(/^(\d+)\.\s+(.*)$/u);
-
-    if (orderedListMatch) {
-      const items: string[] = [];
-
-      while (index < lines.length) {
-        const match = lines[index].match(/^\d+\.\s+(.*)$/u);
-
-        if (!match) {
-          break;
-        }
-
+        const match = lines[index].match(itemPattern);
+        if (!match) break;
+        const contentIndent = match[0].length - match[1].length;
         const itemLines = [match[1]];
         index += 1;
-        while (index < lines.length && !isParagraphBoundary(lines[index].trimStart())) {
-          itemLines.push(lines[index].trimStart());
+        while (index < lines.length) {
+          const continuation = lines[index];
+          const indentation = continuation.match(/^ +/u)?.[0].length ?? 0;
+          if (!continuation.trim()) {
+            let next = index + 1;
+            while (next < lines.length && !lines[next].trim()) next += 1;
+            if (
+              next === lines.length ||
+              (!itemPattern.test(lines[next]) && (lines[next].match(/^ +/u)?.[0].length ?? 0) < contentIndent)
+            )
+              break;
+            itemLines.push('');
+          } else if (indentation >= contentIndent) {
+            itemLines.push(continuation.slice(contentIndent));
+          } else if (!isParagraphBoundary(continuation.trimStart())) {
+            itemLines.push(continuation.trimStart());
+          } else {
+            break;
+          }
           index += 1;
         }
-        items.push(`<li>${renderInlineMarkdown(itemLines.join('\n'))}</li>`);
+        items.push(itemLines);
       }
-
-      yield `<ol start="${Number(orderedListMatch[1])}">${items.join('')}</ol>`;
+      const loose = items.some((item) => item.includes(''));
+      yield ordered ? `<ol start="${Number.parseInt(listMatch[1], 10)}">` : '<ul>';
+      for (const item of items) {
+        yield { markdown: item.join('\n'), opening: '<li>', closing: '</li>', tightParagraphs: !loose };
+      }
+      yield ordered ? '</ol>' : '</ul>';
       continue;
     }
 
     const paragraphLines = [line.trimStart()];
     index += 1;
 
-    while (index < lines.length && !isParagraphBoundary(lines[index], true)) {
+    while (
+      index < lines.length &&
+      !isParagraphBoundary(lines[index], true) &&
+      !/^ {0,3}(?:=+|-+)\s*$/u.test(lines[index])
+    ) {
       paragraphLines.push(lines[index].trimStart());
       index += 1;
     }
 
-    yield `<p>${renderInlineMarkdown(paragraphLines.join('\n'))}</p>`;
+    const underline = lines[index]?.match(/^ {0,3}(=+|-+)\s*$/u);
+    if (underline) {
+      const level = underline[1][0] === '=' ? 1 : 2;
+      yield `<h${level}>${renderInlineMarkdown(paragraphLines.join('\n').trim())}</h${level}>`;
+      index += 1;
+    } else {
+      const paragraph = renderInlineMarkdown(paragraphLines.join('\n'));
+      yield tightParagraphs ? paragraph : `<p>${paragraph}</p>`;
+    }
   }
 }
 
@@ -431,10 +460,10 @@ function renderMarkdownBlocks(markdown: string) {
     } else if (typeof next.value === 'string') {
       html.push(next.value);
     } else {
-      html.push('<blockquote>'.repeat(next.value.depth));
+      html.push(next.value.opening);
       frames.push({
-        parts: renderMarkdownBlockParts(next.value.markdown),
-        closing: '</blockquote>'.repeat(next.value.depth),
+        parts: renderMarkdownBlockParts(next.value.markdown, next.value.tightParagraphs),
+        closing: next.value.closing,
       });
     }
   }

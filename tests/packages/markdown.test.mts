@@ -277,3 +277,37 @@ test('toolbar emphasis leaves selected whitespace outside the delimiters', () =>
     }
   }
 });
+
+test('indented lists remain child blocks of their parent item', () => {
+  assert.equal(renderMarkdownPreview('- Parent\n  - Child'), '<ul><li>Parent<ul><li>Child</li></ul></li></ul>');
+  assert.equal(
+    renderMarkdownPreview('1. Parent\n   1. Child'),
+    '<ol start="1"><li>Parent<ol start="1"><li>Child</li></ol></li></ol>',
+  );
+  assert.equal(
+    renderMarkdownPreview('- Parent\n  1. Child\n- Sibling'),
+    '<ul><li>Parent<ol start="1"><li>Child</li></ol></li><li>Sibling</li></ul>',
+  );
+});
+
+test('blockquote paragraphs consume lazy continuation without crossing block boundaries', () => {
+  assert.equal(
+    renderMarkdownPreview('> quoted text\ncontinuation'),
+    '<blockquote><p>quoted text continuation</p></blockquote>',
+  );
+  assert.equal(
+    renderMarkdownPreview('> quoted text\n\noutside'),
+    '<blockquote><p>quoted text</p></blockquote><p>outside</p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('> quoted text\n# Outside'),
+    '<blockquote><p>quoted text</p></blockquote><h1>Outside</h1>',
+  );
+});
+
+test('setext underlines form headings while standalone thematic breaks remain rules', () => {
+  assert.equal(renderMarkdownPreview('Section title\n---'), '<h2>Section title</h2>');
+  assert.equal(renderMarkdownPreview('Section title\n==='), '<h1>Section title</h1>');
+  assert.equal(renderMarkdownPreview('First line\nsecond line\n---'), '<h2>First line second line</h2>');
+  assert.equal(renderMarkdownPreview('---'), '<hr />');
+});
