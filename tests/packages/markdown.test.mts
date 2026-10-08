@@ -364,3 +364,55 @@ test('code fences close with up to three leading spaces', () => {
   }
   assert.match(renderMarkdownPreview('```\ncode\n    ```\n# After'), /<code>code\n    ```\n# After<\/code>/);
 });
+
+test('nested list chains materialize only a bounded multiple of the input', () => {
+  const depth = 2000;
+  const markdown = '- '.repeat(depth) + 'x';
+  const originalSplit = String.prototype.split;
+  let copiedCharacters = 0;
+  let html: string;
+  try {
+    String.prototype.split = new Proxy(originalSplit, {
+      apply(target, receiver, args) {
+        if (args[0] === '\n') copiedCharacters += String(receiver).length;
+        return Reflect.apply(target, receiver, args);
+      },
+    });
+    html = renderMarkdownPreview(markdown);
+  } finally {
+    String.prototype.split = originalSplit;
+  }
+  assert.equal(html, '<ul><li>'.repeat(depth) + 'x' + '</li></ul>'.repeat(depth));
+  assert.ok(copiedCharacters <= markdown.length * 8, 'nested lists repeatedly materialize the remaining input');
+  assert.equal(renderMarkdownPreview('- - ***'), '<ul><li><ul><li><hr /></li></ul></li></ul>');
+  assert.equal(renderMarkdownPreview('- * * *'), '<ul><li><hr /></li></ul>');
+});
+
+test('opening code fences allow up to three leading spaces and dedent their content', () => {
+  for (const indentation of ['', ' ', '  ', '   ']) {
+    assert.equal(
+      renderMarkdownPreview(indentation + '```js\ncode\n' + indentation + '```'),
+      '<pre class="markdown-code-block" data-language="js"><code>code</code></pre>',
+    );
+  }
+  assert.equal(
+    renderMarkdownPreview('  ```\n  code\n  ```'),
+    '<pre class="markdown-code-block"><code>code</code></pre>',
+  );
+});
+
+test('emphasis pairing follows the rule of three for dual-purpose runs', () => {
+  assert.equal(renderMarkdownPreview('*foo**bar*'), '<p><em>foo**bar</em></p>');
+  assert.equal(renderMarkdownPreview('**foo*bar**'), '<p><strong>foo*bar</strong></p>');
+  assert.equal(renderMarkdownPreview('a***b***c'), '<p>a<em><strong>b</strong></em>c</p>');
+});
+
+test('ordered lists accept parenthesized markers and keep one delimiter per list', () => {
+  assert.equal(renderMarkdownPreview('1) First\n2) Second'), '<ol start="1"><li>First</li><li>Second</li></ol>');
+  assert.equal(
+    renderMarkdownPreview('1. First\n2) Second'),
+    '<ol start="1"><li>First</li></ol><ol start="2"><li>Second</li></ol>',
+  );
+  assert.equal(renderMarkdownPreview('Text\n1) First'), '<p>Text</p><ol start="1"><li>First</li></ol>');
+  assert.equal(renderMarkdownPreview('Text\n2) Second'), '<p>Text 2) Second</p>');
+});
