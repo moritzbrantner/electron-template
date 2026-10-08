@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'bun:test';
@@ -398,8 +398,11 @@ test('documents service supports save, save as, open recent, dirty state, and ca
   assert.equal((await service.getState()).content, 'hello again');
 
   await writeFile(recentFilePath, 'from recent', 'utf8');
+  const previousSaveTime = new Date('2020-01-02T03:04:05.000Z');
+  await utimes(recentFilePath, previousSaveTime, previousSaveTime);
   await service.openRecent(recentFilePath, {} as never);
   assert.equal((await service.getState()).content, 'from recent');
+  assert.equal((await service.getState()).lastSavedAt, previousSaveTime.toISOString());
   assert.equal((await service.listRecent()).length, 2);
 
   for (const suffix of ['desktop.json', 'json']) {

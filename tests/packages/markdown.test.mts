@@ -142,3 +142,41 @@ test('many unmatched link openers remain literal', () => {
   const content = '[label]('.repeat(2000);
   assert.equal(renderMarkdownPreview(content), `<p>${content}</p>`);
 });
+
+test('code spans match complete backtick runs and preserve literal backticks', () => {
+  assert.equal(renderMarkdownPreview('``a ` b``'), '<p><code>a ` b</code></p>');
+  assert.equal(renderMarkdownPreview('`` a ` b ``'), '<p><code>a ` b</code></p>');
+  assert.equal(renderMarkdownPreview('`one``two`'), '<p><code>one``two</code></p>');
+});
+
+test('escaped emphasis markers stay literal, including link labels', () => {
+  assert.equal(renderMarkdownPreview('\\*literal\\* and \\~\\~plain\\~\\~'), '<p>*literal* and ~~plain~~</p>');
+  assert.match(renderMarkdownPreview('[\\*literal\\*](https://example.com)'), />\*literal\*<\/a>/);
+});
+
+test('paragraphs and quotes distinguish hard and soft line breaks', () => {
+  assert.equal(renderMarkdownPreview('first  \nsecond\nthird'), '<p>first<br />second third</p>');
+  assert.equal(
+    renderMarkdownPreview('> first\n> second  \n> third'),
+    '<blockquote><p>first second<br />third</p></blockquote>',
+  );
+});
+
+test('list items retain indented and lazy continuation lines', () => {
+  assert.equal(
+    renderMarkdownPreview('- first\n  indented\nlazy\n- second'),
+    '<ul><li>first indented lazy</li><li>second</li></ul>',
+  );
+  assert.equal(
+    renderMarkdownPreview('3. first  \n   continuation\n4. second'),
+    '<ol start="3"><li>first<br />continuation</li><li>second</li></ol>',
+  );
+});
+
+test('large nested emphasis renders every delimiter pair', () => {
+  const delimiters = '*'.repeat(5000);
+  assert.equal(
+    renderMarkdownPreview(`${delimiters}x${delimiters}`),
+    `<p>${'<strong>'.repeat(2500)}x${'</strong>'.repeat(2500)}</p>`,
+  );
+});

@@ -200,11 +200,12 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
   async function loadFile(filePathValue: string, browserWindow: BrowserWindow | null) {
     const raw = await fs.readFile(filePathValue, 'utf8');
     const loaded = options.serializer.deserialize(raw, filePathValue);
+    const metadata = await fs.stat(filePathValue);
 
     setInternalState(browserWindow, {
       content: loaded.content,
       filePath: filePathValue,
-      lastSavedAt: new Date().toISOString(),
+      lastSavedAt: metadata.mtime.toISOString(),
       lastSavedContent: loaded.content,
       statusMessage: `Opened ${path.basename(filePathValue)}`,
     });
