@@ -725,6 +725,7 @@ function createDocumentsScreen() {
   const editorLabel = document.createElement('label');
   editorLabel.className = 'document-editor-label';
   editorLabel.textContent = 'Markdown editor';
+  editorLabel.htmlFor = 'document-editor';
 
   const editorHint = document.createElement('p');
   editorHint.className = 'document-helper-text';
@@ -736,6 +737,7 @@ function createDocumentsScreen() {
   formattingTools.className = 'markdown-tools';
 
   const editor = document.createElement('textarea');
+  editor.id = 'document-editor';
   editor.className = 'document-editor';
   editor.value = content;
   editor.placeholder = '# Untitled document\n\nStart writing your markdown here.';

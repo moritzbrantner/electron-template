@@ -205,9 +205,29 @@ function codeSpanEnds(text: string) {
   return ends;
 }
 
+function renderCharacterReferences(text: string) {
+  // Preserve references as HTML text tokens so the browser decodes them without
+  // letting decoded punctuation create Markdown delimiters or HTML elements.
+  return text.replace(/&amp;((?:#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6}|[A-Za-z][A-Za-z0-9]*));/gu, '&$1;');
+}
+
+function autolinkEnds(text: string) {
+  const ends = new Map<number, number>();
+  let opening: number | null = null;
+  for (const match of text.matchAll(/&lt;|&gt;/gu)) {
+    if (match[0] === '&lt;') opening = match.index;
+    else if (opening !== null) {
+      ends.set(opening, match.index);
+      opening = null;
+    }
+  }
+  return ends;
+}
+
 function formatLinksAndCode(text: string, protect: (markup: string) => string, allowLinks = true) {
   const codeEnds = codeSpanEnds(text);
   const pairs = delimiterPairs(text, codeEnds);
+  const angleEnds = autolinkEnds(text);
   const result: string[] = [];
   let cursor = 0;
   for (let index = 0; index < text.length; index += 1) {
@@ -232,6 +252,27 @@ function formatLinksAndCode(text: string, protect: (markup: string) => string, a
       }
       continue;
     }
+    if (allowLinks && angleEnds.has(index)) {
+      const end = angleEnds.get(index)!;
+      const label = text.slice(index + 4, end);
+      const destination = label.replaceAll('&amp;', '&').replaceAll('&quot;', '"');
+      const email =
+        /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$/u.test(
+          destination,
+        );
+      const uri = /^[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\s<>]*$/u.test(destination);
+      const href = email ? `mailto:${destination}` : uri ? destination : null;
+      const safeHref = href && sanitizeMarkdownHref(escapeHtml(href));
+      if (safeHref) {
+        result.push(
+          text.slice(cursor, index),
+          protect(`<a href="${safeHref}" target="_blank" rel="noreferrer">${label}</a>`),
+        );
+        cursor = end + 4;
+        index = cursor - 1;
+        continue;
+      }
+    }
     if (!allowLinks || text[index] !== '[') continue;
     const labelEnd = pairs.get(index);
     if (labelEnd === undefined || text[labelEnd + 1] !== '(') continue;
@@ -245,7 +286,7 @@ function formatLinksAndCode(text: string, protect: (markup: string) => string, a
       text.slice(cursor, index),
       safeHref
         ? protect(
-            `<a href="${safeHref}"${link.title === null ? '' : ` title="${decodeMarkdownEscapes(link.title)}"`} target="_blank" rel="noreferrer">${label}</a>`,
+            `<a href="${renderCharacterReferences(safeHref)}"${link.title === null ? '' : ` title="${renderCharacterReferences(decodeMarkdownEscapes(link.title))}"`} target="_blank" rel="noreferrer">${label}</a>`,
           )
         : label,
     );
@@ -253,7 +294,7 @@ function formatLinksAndCode(text: string, protect: (markup: string) => string, a
     index = end;
   }
   result.push(text.slice(cursor));
-  return result.join('');
+  return renderCharacterReferences(result.join(''));
 }
 
 function restoreMarkup(html: string, tokens: string[], prefix: string) {
@@ -295,14 +336,23 @@ function renderInlineMarkdown(text: string) {
   return restoreMarkup(html, tokens, prefix);
 }
 
+function matchCodeFence(line: string) {
+  const match = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/u);
+  return match && (match[1][0] !== '`' || !match[2].includes('`')) ? match : null;
+}
+
+function closingCodeFence(marker: string) {
+  return new RegExp('^ {0,3}' + marker[0] + '{' + marker.length + ',}\\s*$', 'u');
+}
+
 function isParagraphBoundary(line: string, interruptingParagraph = false) {
   return (
     line.trim().length === 0 ||
-    /^(#{1,6})\s+/u.test(line) ||
+    /^ {0,3}(#{1,6})(?:[ \t]+|$)/u.test(line) ||
     /^>\s?/u.test(line) ||
     /^([-*+])\s+/u.test(line) ||
     (interruptingParagraph ? /^1[.)]\s+/u : /^\d+[.)]\s+/u).test(line) ||
-    /^ {0,3}```/u.test(line) ||
+    Boolean(matchCodeFence(line)) ||
     /^([*_-])(?:\s*\1){2,}\s*$/u.test(line.trim())
   );
 }
@@ -365,12 +415,12 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
       continue;
     }
 
-    const fenceMatch = line.match(/^ {0,3}(`{3,})([^`]*)$/u);
+    const fenceMatch = matchCodeFence(line);
     if (fenceMatch) {
       const language = fenceMatch[2].trim();
       const indentation = line.length - line.trimStart().length;
       const codeIndent = new RegExp('^ {0,' + indentation + '}', 'u');
-      const closingFence = new RegExp('^ {0,3}`{' + fenceMatch[1].length + ',}\\s*$', 'u');
+      const closingFence = closingCodeFence(fenceMatch[1]);
       const codeLines: string[] = [];
       index += 1;
 
@@ -387,7 +437,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
       continue;
     }
 
-    const headingMatch = line.match(/^(#{1,6})\s+(.*)$/u);
+    const headingMatch = line.match(/^ {0,3}(#{1,6})(?:[ \t]+|$)(.*)$/u);
 
     if (headingMatch) {
       const level = headingMatch[1].length;
@@ -406,18 +456,18 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
       const quoteLines: string[] = [];
 
       let lazyParagraph = false;
-      let quoteFenceWidth = 0;
+      let quoteFence: RegExp | null = null;
       while (index < lines.length) {
         const quoteLine = lines[index];
         if (/^>\s?/u.test(quoteLine)) {
           quoteLines.push(quoteLine);
           const content = quoteLine.replace(/^(?:>\s?)+/u, '');
-          const fence = content.match(/^ {0,3}(`{3,})([^`]*)$/u);
-          if (quoteFenceWidth > 0) {
-            if (fence && fence[1].length >= quoteFenceWidth && !fence[2].trim()) quoteFenceWidth = 0;
+          const fence = matchCodeFence(content);
+          if (quoteFence) {
+            if (quoteFence.test(content)) quoteFence = null;
             lazyParagraph = false;
           } else if (fence) {
-            quoteFenceWidth = fence[1].length;
+            quoteFence = closingCodeFence(fence[1]);
             lazyParagraph = false;
           } else {
             lazyParagraph = !isParagraphBoundary(content, true) && !/^(?:=+|-+)\s*$/u.test(content);
@@ -453,21 +503,22 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
       continue;
     }
 
-    const listMatch = line.match(/^([-*+]|\d+[.)])\s+(.*)$/u);
+    const listMatch = line.match(/^([-*+]|\d+[.)])(?:[ \t]+(.*)|$)/u);
     if (listMatch) {
       const ordered = /^\d/u.test(listMatch[1]);
       const itemPattern = ordered
-        ? new RegExp(`^\\d+[${listMatch[1].at(-1)}]\\s+(.*)$`, 'u')
-        : new RegExp(`^[${listMatch[1]}]\\s+(.*)$`, 'u');
+        ? new RegExp(`^\\d+[${listMatch[1].at(-1)}](?:[ \\t]+(.*)|$)`, 'u')
+        : new RegExp(`^[${listMatch[1]}](?:[ \\t]+(.*)|$)`, 'u');
       const items: string[][] = [];
       while (index < lines.length) {
         const match = lines[index].match(itemPattern);
         if (!match) break;
-        const contentIndent = match[0].length - match[1].length;
-        const itemLines = [match[1]];
-        let lazyParagraph = !isParagraphBoundary(match[1]);
-        const itemFence = match[1].match(/^ {0,3}(`{3,})([^`]*)$/u);
-        let closingItemFence = itemFence ? new RegExp('^ {0,3}`{' + itemFence[1].length + ',}\\s*$', 'u') : null;
+        const itemContent = match[1] ?? '';
+        const contentIndent = itemContent ? match[0].length - itemContent.length : listMatch[1].length + 1;
+        const itemLines = [itemContent];
+        let lazyParagraph = !isParagraphBoundary(itemContent);
+        const itemFence = matchCodeFence(itemContent);
+        let closingItemFence = itemFence ? closingCodeFence(itemFence[1]) : null;
         index += 1;
         while (index < lines.length) {
           const continuation = lines[index];
@@ -489,8 +540,8 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
               if (closingItemFence.test(content)) closingItemFence = null;
               lazyParagraph = false;
             } else {
-              const fence = content.match(/^ {0,3}(`{3,})([^`]*)$/u);
-              closingItemFence = fence ? new RegExp('^ {0,3}`{' + fence[1].length + ',}\\s*$', 'u') : null;
+              const fence = matchCodeFence(content);
+              closingItemFence = fence ? closingCodeFence(fence[1]) : null;
               lazyParagraph =
                 !isParagraphBoundary(content.trimStart(), lazyParagraph) && !/^(?:=+|-+)\s*$/u.test(content.trim());
             }
@@ -505,7 +556,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
         }
         items.push(itemLines);
       }
-      const loose = items.some((item) => item.includes(''));
+      const loose = items.some((item) => item.length > 1 && item.includes(''));
       yield ordered ? `<ol start="${Number.parseInt(listMatch[1], 10)}">` : '<ul>';
       for (const item of items) {
         yield { markdown: item.join('\n'), opening: '<li>', closing: '</li>', tightParagraphs: !loose };

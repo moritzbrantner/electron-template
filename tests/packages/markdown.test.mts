@@ -416,3 +416,65 @@ test('ordered lists accept parenthesized markers and keep one delimiter per list
   assert.equal(renderMarkdownPreview('Text\n1) First'), '<p>Text</p><ol start="1"><li>First</li></ol>');
   assert.equal(renderMarkdownPreview('Text\n2) Second'), '<p>Text 2) Second</p>');
 });
+
+test('tilde fences preserve code, matching closers, and nested block context', () => {
+  assert.equal(
+    renderMarkdownPreview('~~~js\ncode\n~~~'),
+    '<pre class="markdown-code-block" data-language="js"><code>code</code></pre>',
+  );
+  assert.equal(renderMarkdownPreview('~~~\n```\n~~~'), '<pre class="markdown-code-block"><code>```</code></pre>');
+  assert.equal(renderMarkdownPreview('```\n~~~\n```'), '<pre class="markdown-code-block"><code>~~~</code></pre>');
+  assert.equal(
+    renderMarkdownPreview('> ~~~\n> code\n> ~~~\noutside'),
+    '<blockquote><pre class="markdown-code-block"><code>code</code></pre></blockquote><p>outside</p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('- ~~~\n  code\n  ~~~\noutside'),
+    '<ul><li><pre class="markdown-code-block"><code>code</code></pre></li></ul><p>outside</p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('~~~ a`b\ncode\n~~~~'),
+    '<pre class="markdown-code-block" data-language="a`b"><code>code</code></pre>',
+  );
+});
+
+test('ATX headings allow up to three spaces before their marker', () => {
+  for (let indent = 0; indent <= 3; indent += 1) {
+    assert.equal(renderMarkdownPreview(`${' '.repeat(indent)}# Heading`), '<h1>Heading</h1>');
+    assert.equal(renderMarkdownPreview(`paragraph\n${' '.repeat(indent)}## Next`), '<p>paragraph</p><h2>Next</h2>');
+  }
+});
+
+test('empty list items remain in their surrounding ordered and unordered lists', () => {
+  assert.equal(renderMarkdownPreview('-\n- item'), '<ul><li></li><li>item</li></ul>');
+  assert.equal(renderMarkdownPreview('1.\n2. item'), '<ol start="1"><li></li><li>item</li></ol>');
+  assert.equal(renderMarkdownPreview('3)\n4) item'), '<ol start="3"><li></li><li>item</li></ol>');
+  assert.equal(renderMarkdownPreview('+'), '<ul><li></li></ul>');
+});
+
+test('character references render as text while code and escaped references remain literal', () => {
+  assert.equal(
+    renderMarkdownPreview('Copyright &copy; 2026 &#38; &#x26;'),
+    '<p>Copyright &copy; 2026 &#38; &#x26;</p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('&lt;script&gt;alert(1)&lt;/script&gt;'),
+    '<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>',
+  );
+  assert.equal(renderMarkdownPreview('`&copy;` \\&copy;'), '<p><code>&amp;copy;</code> &amp;copy;</p>');
+  assert.equal(renderMarkdownPreview('&ast;literal&ast;'), '<p>&ast;literal&ast;</p>');
+});
+
+test('angle-bracket URI and email autolinks retain the existing safe scheme policy', () => {
+  assert.equal(
+    renderMarkdownPreview('<https://example.com>'),
+    '<p><a href="https://example.com" target="_blank" rel="noreferrer">https://example.com</a></p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('<reader@example.com>'),
+    '<p><a href="mailto:reader@example.com" target="_blank" rel="noreferrer">reader@example.com</a></p>',
+  );
+  assert.equal(renderMarkdownPreview('`<https://example.com>`'), '<p><code>&lt;https://example.com&gt;</code></p>');
+  assert.doesNotMatch(renderMarkdownPreview('<javascript:alert(1)> <data:text/html,test>'), /<a /u);
+  assert.doesNotMatch(renderMarkdownPreview('&lt;https://example.com&gt;'), /<a /u);
+});
