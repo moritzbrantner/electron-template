@@ -6,13 +6,26 @@ export const desktopDocumentSerializer: DocumentSerializer = {
       throw new Error(`Invalid markdown payload in ${filePath}`);
     }
 
-    return {
-      content: raw.replaceAll('\r\n', '\n'),
-    };
+    if (filePath.toLowerCase().endsWith('.desktop.json')) {
+      const parsed: unknown = JSON.parse(raw);
+      if (
+        typeof parsed !== 'object' ||
+        parsed === null ||
+        !('content' in parsed) ||
+        typeof parsed.content !== 'string'
+      ) {
+        throw new Error(`Invalid legacy document payload in ${filePath}`);
+      }
+      return { content: parsed.content };
+    }
+    return { content: raw.replaceAll('\r\n', '\n') };
   },
   extension: 'md',
   name: 'Markdown document',
-  serialize(value) {
+  serialize(value, filePath) {
+    if (filePath?.toLowerCase().endsWith('.desktop.json')) {
+      return `${JSON.stringify({ content: value.content, version: 1 }, null, 2)}\n`;
+    }
     if (value.content.length === 0) {
       return '';
     }

@@ -14,6 +14,7 @@ import {
   createDesktopPreferencesStore,
   loadDesktopPreferencesForLaunch,
 } from '../../src/platform/main/desktop-preferences-store.ts';
+import { desktopDocumentSerializer } from '../../src/platform/shared/document-serializer.ts';
 import { isDesktopPreferences } from '../../src/platform/shared/preferences.ts';
 
 test('json store loads defaults, validates, migrates, and writes atomically', async () => {
@@ -377,16 +378,7 @@ test('documents service supports save, save as, open recent, dirty state, and ca
     dialogAdapter,
     getBroadcastTargets: () => [],
     recentStore,
-    serializer: {
-      deserialize(raw: string) {
-        return { content: raw };
-      },
-      extension: 'md',
-      name: 'Markdown',
-      serialize(value) {
-        return value.content;
-      },
-    },
+    serializer: desktopDocumentSerializer,
   });
 
   await service.updateDraft('hello world');
@@ -401,12 +393,23 @@ test('documents service supports save, save as, open recent, dirty state, and ca
 
   await service.updateDraft('hello again');
   await service.save({} as never);
-  assert.equal(await readFile(documentFilePath, 'utf8'), 'hello again');
+  assert.equal(await readFile(documentFilePath, 'utf8'), 'hello again\n');
 
   await writeFile(recentFilePath, 'from recent', 'utf8');
   await service.openRecent(recentFilePath, {} as never);
   assert.equal((await service.getState()).content, 'from recent');
   assert.equal((await service.listRecent()).length, 2);
+
+  const legacyPath = path.join(directory, 'legacy.desktop.json');
+  await writeFile(legacyPath, JSON.stringify({ content: '# Legacy', version: 1 }), 'utf8');
+  await service.openRecent(legacyPath, {} as never);
+  assert.equal((await service.getState()).content, '# Legacy');
+  await service.updateDraft('# Edited legacy');
+  await service.save({} as never);
+  assert.equal(JSON.parse(await readFile(legacyPath, 'utf8')).content, '# Edited legacy');
+  await service.openRecent(legacyPath, {} as never);
+  assert.equal((await service.getState()).content, '# Edited legacy');
+
 
   const cancelService = createDocumentsService({
     defaultContent: 'start',
