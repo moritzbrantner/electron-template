@@ -210,3 +210,37 @@ test('underscore emphasis preserves intraword underscores', () => {
   assert.equal(renderMarkdownPreview('(_italic_)'), '<p>(<em>italic</em>)</p>');
   assert.equal(renderMarkdownPreview('\\_literal\\_'), '<p>_literal_</p>');
 });
+
+test('quoted link titles ignore internal parentheses and decode destination escapes', () => {
+  assert.equal(
+    renderMarkdownPreview('[site](https://example.com "Version 2)")'),
+    '<p><a href="https://example.com" title="Version 2)" target="_blank" rel="noreferrer">site</a></p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('[site](https://example.com "Version (2")'),
+    '<p><a href="https://example.com" title="Version (2" target="_blank" rel="noreferrer">site</a></p>',
+  );
+  assert.match(renderMarkdownPreview('[x](https://example.com/a\\*b\\!c)'), /href="https:\/\/example.com\/a\*b!c"/);
+});
+
+test('unmatched inner emphasis delimiters do not block enclosing spans', () => {
+  assert.equal(renderMarkdownPreview('*foo _bar*'), '<p><em>foo _bar</em></p>');
+  assert.equal(renderMarkdownPreview('*foo **bar*'), '<p><em>foo **bar</em></p>');
+  assert.equal(renderMarkdownPreview('*foo _bar* baz_'), '<p><em>foo _bar</em> baz_</p>');
+});
+
+test('blank quoted lines separate paragraphs inside one blockquote', () => {
+  assert.equal(renderMarkdownPreview('> First\n>\n> Second'), '<blockquote><p>First</p><p>Second</p></blockquote>');
+});
+
+test('non-one ordered starts require a block boundary after prose', () => {
+  assert.equal(renderMarkdownPreview('The finalists are\n2. Alice'), '<p>The finalists are 2. Alice</p>');
+  assert.equal(
+    renderMarkdownPreview('The finalists are\n\n2. Alice'),
+    '<p>The finalists are</p><ol start="2"><li>Alice</li></ol>',
+  );
+  assert.equal(
+    renderMarkdownPreview('The finalists are\n1. Alice'),
+    '<p>The finalists are</p><ol start="1"><li>Alice</li></ol>',
+  );
+});

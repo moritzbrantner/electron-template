@@ -2,6 +2,10 @@ function escapeHtml(value: string) {
   return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 }
 
+function decodeMarkdownEscapes(text: string) {
+  return text.replace(/\\([!-/:-@[-`{-~])/gu, '$1');
+}
+
 function sanitizeMarkdownHref(href: string) {
   const trimmedHref = href.trim();
 
@@ -46,6 +50,21 @@ function parseLinkDestination(text: string) {
 function formatEmphasis(text: string) {
   const fragments: string[] = [];
   const openers: { marker: string; width: number; fragment: number }[] = [];
+  const indices = new Map<string, number[]>();
+  const bucket = (marker: string, width: number) => {
+    const key = `${marker}:${width}`;
+    let values = indices.get(key);
+    if (!values) {
+      values = [];
+      indices.set(key, values);
+    }
+    return values;
+  };
+  const popOpener = () => {
+    const opener = openers.pop()!;
+    bucket(opener.marker, opener.width).pop();
+    return opener;
+  };
   let cursor = 0;
   for (let index = 0; index < text.length; ) {
     const marker = text[index];
@@ -68,10 +87,15 @@ function formatEmphasis(text: string) {
     const canClose = marker === '_' ? rightFlanking && (!leftFlanking || afterPunctuation) : rightFlanking;
     const canOpen = marker === '_' ? leftFlanking && (!rightFlanking || beforePunctuation) : leftFlanking;
     if (canClose) {
-      while (openers.length > 0) {
-        const opener = openers[openers.length - 1];
-        if (opener.marker !== marker || opener.width > remaining) break;
-        openers.pop();
+      while (remaining > 0) {
+        const single = marker === '~' ? -1 : (bucket(marker, 1).at(-1) ?? -1);
+        const double = remaining >= 2 ? (bucket(marker, 2).at(-1) ?? -1) : -1;
+        const openerIndex = Math.max(single, double);
+        if (openerIndex === -1) break;
+        // Unmatched inner openers stay literal; discard their stack entries so
+        // later closers cannot create crossing spans. Each opener is removed once.
+        while (openers.length - 1 > openerIndex) popOpener();
+        const opener = popOpener();
         const tag = marker === '~' ? 'del' : opener.width === 2 ? 'strong' : 'em';
         fragments[opener.fragment] = `<${tag}>`;
         fragments.push(`</${tag}>`);
@@ -82,6 +106,7 @@ function formatEmphasis(text: string) {
       while (remaining >= (marker === '~' ? 2 : 1)) {
         // An odd asterisk run opens emphasis around its inner strong pairs.
         const width = marker !== '~' && remaining % 2 === 1 ? 1 : 2;
+        bucket(marker, width).push(openers.length);
         openers.push({ marker, width, fragment: fragments.length });
         fragments.push(marker.repeat(width));
         remaining -= width;
@@ -103,6 +128,20 @@ function delimiterPairs(text: string) {
     if (text[index] === '\\') {
       index += 1;
       continue;
+    }
+    if (parentheses.length > 0 && /\s/u.test(text[index - 1] ?? '')) {
+      const quote = text.startsWith('&quot;', index) ? '&quot;' : text[index] === "'" ? "'" : null;
+      if (quote) {
+        let end = index + quote.length;
+        while (end < text.length && !text.startsWith(quote, end)) {
+          if (text[end] === '\\') end += 1;
+          end += 1;
+        }
+        if (end < text.length) {
+          index = end + quote.length - 1;
+          continue;
+        }
+      }
     }
     if (text[index] === '[') brackets.push(index);
     if (text[index] === '(') parentheses.push(index);
@@ -166,13 +205,13 @@ function formatLinksAndCode(text: string, protect: (markup: string) => string, a
     if (end === undefined) continue;
     const link = parseLinkDestination(text.slice(labelEnd + 2, end));
     if (!link) continue;
-    const safeHref = sanitizeMarkdownHref(link.destination.replace(/\\([()\\])/gu, '$1'));
+    const safeHref = sanitizeMarkdownHref(decodeMarkdownEscapes(link.destination));
     const label = formatEmphasis(formatLinksAndCode(text.slice(index + 1, labelEnd), protect, false));
     result.push(
       text.slice(cursor, index),
       safeHref
         ? protect(
-            `<a href="${safeHref}"${link.title === null ? '' : ` title="${link.title}"`} target="_blank" rel="noreferrer">${label}</a>`,
+            `<a href="${safeHref}"${link.title === null ? '' : ` title="${decodeMarkdownEscapes(link.title)}"`} target="_blank" rel="noreferrer">${label}</a>`,
           )
         : label,
     );
@@ -222,19 +261,19 @@ function renderInlineMarkdown(text: string) {
   return restoreMarkup(html, tokens, prefix);
 }
 
-function isParagraphBoundary(line: string) {
+function isParagraphBoundary(line: string, interruptingParagraph = false) {
   return (
     line.trim().length === 0 ||
     /^(#{1,6})\s+/u.test(line) ||
     /^>\s?/u.test(line) ||
     /^([-*+])\s+/u.test(line) ||
-    /^\d+\.\s+/u.test(line) ||
+    (interruptingParagraph ? /^1\.\s+/u : /^\d+\.\s+/u).test(line) ||
     /^```/u.test(line) ||
     /^([*_-])(?:\s*\1){2,}\s*$/u.test(line.trim())
   );
 }
 
-export function renderMarkdownPreview(markdown: string) {
+function renderMarkdownBlocks(markdown: string) {
   const normalizedMarkdown = markdown.replaceAll('\r\n', '\n');
   const lines = normalizedMarkdown.split('\n');
   const html: string[] = [];
@@ -293,7 +332,7 @@ export function renderMarkdownPreview(markdown: string) {
         index += 1;
       }
 
-      html.push(`<blockquote><p>${renderInlineMarkdown(quoteLines.join('\n'))}</p></blockquote>`);
+      html.push(`<blockquote>${renderMarkdownBlocks(quoteLines.join('\n'))}</blockquote>`);
       continue;
     }
 
@@ -350,7 +389,7 @@ export function renderMarkdownPreview(markdown: string) {
     const paragraphLines = [line.trimStart()];
     index += 1;
 
-    while (index < lines.length && !isParagraphBoundary(lines[index])) {
+    while (index < lines.length && !isParagraphBoundary(lines[index], true)) {
       paragraphLines.push(lines[index].trimStart());
       index += 1;
     }
@@ -358,9 +397,12 @@ export function renderMarkdownPreview(markdown: string) {
     html.push(`<p>${renderInlineMarkdown(paragraphLines.join('\n'))}</p>`);
   }
 
-  if (html.length === 0) {
-    return '<p class="document-preview__empty">Start typing to preview your markdown document.</p>';
-  }
-
   return html.join('');
+}
+
+export function renderMarkdownPreview(markdown: string) {
+  return (
+    renderMarkdownBlocks(markdown) ||
+    '<p class="document-preview__empty">Start typing to preview your markdown document.</p>'
+  );
 }
