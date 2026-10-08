@@ -28,3 +28,15 @@ export function prefixMarkdownLines(text: string, start: number, end: number, pr
     selectionEnd: lineStart + replacement.length,
   };
 }
+
+export function insertMarkdownLink(text: string, start: number, end: number) {
+  const label = (text.slice(start, end) || 'link text').replace(/[\\\[\]]/gu, '\\$&');
+  const destination = 'https://example.com';
+  const link = `[${label}](${destination})`;
+  const selectionStart = start + label.length + 3;
+  return {
+    content: text.slice(0, start) + link + text.slice(end),
+    selectionStart,
+    selectionEnd: selectionStart + destination.length,
+  };
+}

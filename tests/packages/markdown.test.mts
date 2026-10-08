@@ -110,3 +110,35 @@ test('block toolbar insertion prefixes whole selected lines', async () => {
   }
   assert.equal(prefixMarkdownLines('one\ntwo\nthree', 2, 6, '> ', 'fallback').content, '> one\n> two\nthree');
 });
+
+test('code spans never rewrite a link destination', () => {
+  assert.match(renderMarkdownPreview('[x](https://example.com/a`b`c)'), /href="https:\/\/example.com\/a`b`c"/);
+  assert.equal(renderMarkdownPreview('`[x](https://example.com)`'), '<p><code>[x](https://example.com)</code></p>');
+  assert.match(renderMarkdownPreview('[`x`](https://example.com)'), /<a [^>]+><code>x<\/code><\/a>/);
+});
+
+test('mixed thematic-break delimiters remain paragraph content', () => {
+  for (const content of ['*_*', '-*-', '--_']) {
+    assert.doesNotMatch(renderMarkdownPreview(content), /<hr/);
+  }
+  for (const content of ['---', '***', '___', '- - -']) {
+    assert.equal(renderMarkdownPreview(content), '<hr />');
+  }
+});
+
+test('link insertion preserves bracketed labels and selects the destination', async () => {
+  const { insertMarkdownLink } = await import('../../src/platform/shared/markdown-editing.ts');
+  for (const label of ['array[index]', 'closing]bracket', 'opening[bracket']) {
+    const result = insertMarkdownLink(label, 0, label.length);
+    assert.match(
+      renderMarkdownPreview(result.content),
+      new RegExp(`>${label.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}<\\/a>`),
+    );
+    assert.equal(result.content.slice(result.selectionStart, result.selectionEnd), 'https://example.com');
+  }
+});
+
+test('many unmatched link openers remain literal', () => {
+  const content = '[label]('.repeat(2000);
+  assert.equal(renderMarkdownPreview(content), `<p>${content}</p>`);
+});
