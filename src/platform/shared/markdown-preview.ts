@@ -308,7 +308,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
     const fenceMatch = line.match(/^(`{3,})([^`]*)$/u);
     if (fenceMatch) {
       const language = fenceMatch[2].trim();
-      const closingFence = new RegExp('^`{' + fenceMatch[1].length + ',}\\s*$', 'u');
+      const closingFence = new RegExp('^ {0,3}`{' + fenceMatch[1].length + ',}\\s*$', 'u');
       const codeLines: string[] = [];
       index += 1;
 
@@ -329,7 +329,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
 
     if (headingMatch) {
       const level = headingMatch[1].length;
-      yield `<h${level}>${renderInlineMarkdown(headingMatch[2].trim())}</h${level}>`;
+      yield `<h${level}>${renderInlineMarkdown(headingMatch[2].replace(/(?:^|[ \t]+)#+[ \t]*$/u, '').trim())}</h${level}>`;
       index += 1;
       continue;
     }
@@ -401,6 +401,9 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
         if (!match) break;
         const contentIndent = match[0].length - match[1].length;
         const itemLines = [match[1]];
+        let lazyParagraph = !isParagraphBoundary(match[1]);
+        const itemFence = match[1].match(/^(`{3,})([^`]*)$/u);
+        let closingItemFence = itemFence ? new RegExp('^ {0,3}`{' + itemFence[1].length + ',}\\s*$', 'u') : null;
         index += 1;
         while (index < lines.length) {
           const continuation = lines[index];
@@ -414,11 +417,22 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
             )
               break;
             itemLines.push('');
+            lazyParagraph = false;
           } else if (indentation >= contentIndent) {
-            itemLines.push(continuation.slice(contentIndent));
+            const content = continuation.slice(contentIndent);
+            itemLines.push(content);
+            if (closingItemFence) {
+              if (closingItemFence.test(content)) closingItemFence = null;
+              lazyParagraph = false;
+            } else {
+              const fence = content.match(/^(`{3,})([^`]*)$/u);
+              closingItemFence = fence ? new RegExp('^ {0,3}`{' + fence[1].length + ',}\\s*$', 'u') : null;
+              lazyParagraph =
+                !isParagraphBoundary(content.trimStart(), lazyParagraph) && !/^(?:=+|-+)\s*$/u.test(content.trim());
+            }
           } else if (itemPattern.test(continuation)) {
             break;
-          } else if (!isParagraphBoundary(continuation.trimStart(), true)) {
+          } else if (lazyParagraph && !isParagraphBoundary(continuation.trimStart(), true)) {
             itemLines.push(continuation.trimStart());
           } else {
             break;

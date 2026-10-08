@@ -336,3 +336,31 @@ test('angle-bracket link destinations allow literal unbalanced parentheses', () 
     );
   }
 });
+
+test('lazy list continuation only follows an active paragraph', () => {
+  assert.equal(
+    renderMarkdownPreview('- # Heading\n2. item'),
+    '<ul><li><h1>Heading</h1></li></ul><ol start="2"><li>item</li></ol>',
+  );
+  assert.equal(
+    renderMarkdownPreview('- ```\n  code\n  ```\n2. item'),
+    '<ul><li><pre class="markdown-code-block"><code>code</code></pre></li></ul><ol start="2"><li>item</li></ol>',
+  );
+});
+
+test('ATX headings strip closing hash sequences without changing literal hashes', () => {
+  assert.equal(renderMarkdownPreview('# Section #'), '<h1>Section</h1>');
+  assert.equal(renderMarkdownPreview('## Section ###  '), '<h2>Section</h2>');
+  assert.equal(renderMarkdownPreview('# C#'), '<h1>C#</h1>');
+  assert.equal(renderMarkdownPreview('# Section \\#'), '<h1>Section #</h1>');
+});
+
+test('code fences close with up to three leading spaces', () => {
+  for (const indentation of ['', ' ', '  ', '   ']) {
+    assert.equal(
+      renderMarkdownPreview('```\ncode\n' + indentation + '```\n# After'),
+      '<pre class="markdown-code-block"><code>code</code></pre><h1>After</h1>',
+    );
+  }
+  assert.match(renderMarkdownPreview('```\ncode\n    ```\n# After'), /<code>code\n    ```\n# After<\/code>/);
+});
