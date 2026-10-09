@@ -630,3 +630,52 @@ test('indented quote code cannot lazily absorb outside prose', () => {
     '<ul><li><pre class="markdown-code-block"><code>code</code></pre></li></ul><p>outside</p>',
   );
 });
+
+test('four-space thematic markers remain paragraph continuations', () => {
+  for (const marker of ['---', '***', '___'])
+    assert.equal(renderMarkdownPreview(`paragraph\n    ${marker}`), `<p>paragraph ${marker}</p>`);
+  assert.equal(renderMarkdownPreview('paragraph\n   ***'), '<p>paragraph</p><hr />');
+});
+
+test('tab-padded list content uses visual continuation columns', () => {
+  assert.equal(
+    renderMarkdownPreview('-\tfoo\n  ```\n  bar\n  ```'),
+    '<ul><li>foo</li></ul><pre class="markdown-code-block"><code>bar</code></pre>',
+  );
+  assert.equal(renderMarkdownPreview('-\tfoo\n\tbar'), '<ul><li>foo bar</li></ul>');
+});
+
+test('protected inline markup retains source punctuation for emphasis', () => {
+  assert.equal(
+    renderMarkdownPreview('_foo_[bar](https://x)'),
+    '<p><em>foo</em><a href="https://x" target="_blank" rel="noreferrer">bar</a></p>',
+  );
+  assert.equal(renderMarkdownPreview('_foo_`bar`'), '<p><em>foo</em><code>bar</code></p>');
+  assert.equal(
+    renderMarkdownPreview('_foo_<https://x>'),
+    '<p><em>foo</em><a href="https://x" target="_blank" rel="noreferrer">https://x</a></p>',
+  );
+  assert.equal(renderMarkdownPreview('`bar`_foo_'), '<p><code>bar</code><em>foo</em></p>');
+  assert.equal(
+    renderMarkdownPreview('[_foo_\\!](https://x)'),
+    '<p><a href="https://x" target="_blank" rel="noreferrer"><em>foo</em>!</a></p>',
+  );
+});
+
+test('indented changes of ordered delimiter close the previous list', () => {
+  assert.equal(
+    renderMarkdownPreview('1. foo\n  2) bar'),
+    '<ol start="1"><li>foo</li></ol><ol start="2"><li>bar</li></ol>',
+  );
+});
+
+test('inner explicit links leave enclosing link syntax literal', () => {
+  assert.equal(
+    renderMarkdownPreview('[outer [inner](https://inner)](https://outer)'),
+    '<p>[outer <a href="https://inner" target="_blank" rel="noreferrer">inner</a>](https://outer)</p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('[outer [literal]](https://outer)'),
+    '<p><a href="https://outer" target="_blank" rel="noreferrer">outer [literal]</a></p>',
+  );
+});

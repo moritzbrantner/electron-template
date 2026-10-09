@@ -239,15 +239,39 @@ function autolinkEnds(text: string) {
   return ends;
 }
 
-function formatLinksAndCode(text: string, protect: (markup: string) => string, allowLinks = true) {
+function formatLinksAndCode(
+  text: string,
+  protect: (markup: string, source?: string) => string,
+  allowLinks = true,
+  emphasize: (value: string) => string = formatEmphasis,
+) {
   const codeEnds = codeSpanEnds(text);
   const pairs = delimiterPairs(text, codeEnds);
   const angleEnds = autolinkEnds(text);
+  const links = new Map<
+    number,
+    { labelEnd: number; end: number; link: NonNullable<ReturnType<typeof parseLinkDestination>> }
+  >();
+  let nearestInner: { start: number; end: number } | null = null;
+  if (allowLinks) {
+    // Resolve inner candidates first so enclosing links cannot swallow them.
+    const starts = [...pairs.keys()].filter((start) => text[start] === '[').sort((left, right) => right - left);
+    for (const start of starts) {
+      const labelEnd = pairs.get(start)!;
+      if (text[labelEnd + 1] !== '(') continue;
+      const end = pairs.get(labelEnd + 1);
+      if (end === undefined) continue;
+      const link = parseLinkDestination(text.slice(labelEnd + 2, end));
+      if (!link || (nearestInner && nearestInner.start < labelEnd && nearestInner.end < labelEnd)) continue;
+      links.set(start, { labelEnd, end, link });
+      nearestInner = { start, end };
+    }
+  }
   const result: string[] = [];
   let cursor = 0;
   for (let index = 0; index < text.length; index += 1) {
     if (text[index] === '\\' && /[!-/:-@[-`{-~]/u.test(text[index + 1] ?? '')) {
-      result.push(text.slice(cursor, index), protect(text[index + 1]));
+      result.push(text.slice(cursor, index), protect(text[index + 1], text[index + 1]));
       index += 1;
       cursor = index + 1;
       continue;
@@ -259,7 +283,10 @@ function formatLinksAndCode(text: string, protect: (markup: string) => string, a
       if (end !== undefined) {
         let code = text.slice(runEnd, end).replaceAll('\n', ' ');
         if (code.startsWith(' ') && code.endsWith(' ') && /[^ ]/u.test(code)) code = code.slice(1, -1);
-        result.push(text.slice(cursor, index), protect(`<code>${code}</code>`));
+        result.push(
+          text.slice(cursor, index),
+          protect(`<code>${code}</code>`, text.slice(index, end + runEnd - index)),
+        );
         cursor = end + runEnd - index;
         index = cursor - 1;
       } else {
@@ -281,7 +308,7 @@ function formatLinksAndCode(text: string, protect: (markup: string) => string, a
       if (safeHref) {
         result.push(
           text.slice(cursor, index),
-          protect(`<a href="${safeHref}" target="_blank" rel="noreferrer">${label}</a>`),
+          protect(`<a href="${safeHref}" target="_blank" rel="noreferrer">${label}</a>`, text.slice(index, end + 4)),
         );
         cursor = end + 4;
         index = cursor - 1;
@@ -289,21 +316,19 @@ function formatLinksAndCode(text: string, protect: (markup: string) => string, a
       }
     }
     if (!allowLinks || text[index] !== '[') continue;
-    const labelEnd = pairs.get(index);
-    if (labelEnd === undefined || text[labelEnd + 1] !== '(') continue;
-    const end = pairs.get(labelEnd + 1);
-    if (end === undefined) continue;
-    const link = parseLinkDestination(text.slice(labelEnd + 2, end));
-    if (!link) continue;
+    const candidate = links.get(index);
+    if (!candidate) continue;
+    const { labelEnd, end, link } = candidate;
     const safeHref = sanitizeMarkdownHref(decodeMarkdownEscapes(link.destination));
-    const label = formatEmphasis(formatLinksAndCode(text.slice(index + 1, labelEnd), protect, false));
+    const label = emphasize(formatLinksAndCode(text.slice(index + 1, labelEnd), protect, false, emphasize));
     result.push(
       text.slice(cursor, index),
       safeHref
         ? protect(
             `<a href="${renderCharacterReferences(safeHref)}"${link.title === null ? '' : ` title="${renderCharacterReferences(decodeMarkdownEscapes(link.title))}"`} target="_blank" rel="noreferrer">${label}</a>`,
+            text.slice(index, end + 1),
           )
-        : label,
+        : protect(label, text.slice(index, end + 1)),
     );
     cursor = end + 1;
     index = end;
@@ -340,26 +365,33 @@ function renderInlineMarkdown(text: string) {
   let prefix = '\uE000INLINE_TOKEN:';
   while (html.includes(prefix)) prefix += ':';
   const tokens: string[] = [];
-  const protect = (markup: string) => {
+  const contexts: { first: string | undefined; last: string | undefined }[] = [];
+  const protect = (markup: string, source = markup.length === 1 ? markup : '') => {
     const token = `${prefix}${tokens.length}\uE001`;
     tokens.push(markup);
+    contexts.push({ first: source[0], last: source.at(-1) });
     return token;
   };
-  html = formatLinksAndCode(html, protect);
-  html = html.replace(/(?: {2,}|\\)\n/gu, () => protect('<br />')).replaceAll('\n', ' ');
-  html = formatEmphasis(html, (index) => {
-    let start: number;
-    let end: number;
-    if (html[index] === '\uE001') {
-      start = html.lastIndexOf(prefix, index);
-      end = index;
-    } else if (html.startsWith(prefix, index)) {
-      start = index;
-      end = html.indexOf('\uE001', index);
-    } else return undefined;
-    const value = tokens[Number(html.slice(start + prefix.length, end))];
-    return value?.length === 1 ? value : undefined;
-  });
+  const emphasize = (value: string) =>
+    formatEmphasis(value, (index) => {
+      let start: number;
+      let end: number;
+      let last: boolean;
+      if (value[index] === '\uE001') {
+        start = value.lastIndexOf(prefix, index);
+        end = index;
+        last = true;
+      } else if (value.startsWith(prefix, index)) {
+        start = index;
+        end = value.indexOf('\uE001', index);
+        last = false;
+      } else return undefined;
+      const context = contexts[Number(value.slice(start + prefix.length, end))];
+      return last ? context?.last : context?.first;
+    });
+  html = formatLinksAndCode(html, protect, true, emphasize);
+  html = html.replace(/(?: {2,}|\\)\n/gu, () => protect('<br />', '\n')).replaceAll('\n', ' ');
+  html = emphasize(html);
   return restoreMarkup(html, tokens, prefix);
 }
 
@@ -390,7 +422,7 @@ function isParagraphBoundary(line: string, interruptingParagraph = false) {
     (interruptingParagraph ? /^ {0,3}[-*+][ \t]+\S/u : /^ {0,3}[-*+][ \t]+/u).test(line) ||
     (interruptingParagraph ? /^ {0,3}1[.)][ \t]+\S/u : /^ {0,3}\d{1,9}[.)][ \t]+/u).test(line) ||
     Boolean(matchCodeFence(line)) ||
-    /^([*_-])(?:\s*\1){2,}\s*$/u.test(line.trim())
+    /^ {0,3}([*_-])(?:[ \t]*\1){2,}[ \t]*$/u.test(line)
   );
 }
 
@@ -434,7 +466,9 @@ function singleLineListChain(markdown: string): MarkdownBlockPart | null {
 
 function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): Generator<MarkdownBlockPart> {
   const normalizedMarkdown = markdown.replace(/\r\n?/gu, '\n');
-  const lines = normalizedMarkdown.split('\n');
+  const lines = normalizedMarkdown
+    .split('\n')
+    .map((line) => line.replace(/^[ \t]+/u, (indentation) => ' '.repeat(listPaddingWidth(indentation, 0))));
   if (lines.length === 1) {
     const chain = singleLineListChain(normalizedMarkdown);
     if (chain) {
@@ -573,6 +607,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
         const markerEnd = lines[index].match(/^ {0,3}(?:[-*+]|\d{1,9}[.)])/u)![0].length;
         const padding = lines[index].slice(markerEnd, contentIndent);
         const paddingWidth = listPaddingWidth(padding, markerEnd);
+        if (itemContent) contentIndent = markerEnd + paddingWidth;
         if (itemContent && paddingWidth > 4) {
           itemContent = ' '.repeat(paddingWidth - 1) + itemContent;
           contentIndent = markerEnd + 1;
@@ -610,7 +645,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
                 !isParagraphBoundary(content.trimStart(), lazyParagraph) &&
                 !/^(?:=+|-+)\s*$/u.test(content.trim());
             }
-          } else if (itemPattern.test(continuation) || (ordered && /^\d{1,9}[.)]\s+/u.test(continuation))) {
+          } else if (itemPattern.test(continuation) || (ordered && /^ {0,3}\d{1,9}[.)]\s+/u.test(continuation))) {
             break;
           } else if (lazyParagraph && !isParagraphBoundary(continuation.trimStart(), true)) {
             itemLines.push(continuation.trimStart());
