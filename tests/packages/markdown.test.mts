@@ -489,7 +489,7 @@ test('angle-bracket URI and email autolinks retain the existing safe scheme poli
 test('a marker-only list item with indented content stays tight until a real separator', () => {
   assert.equal(renderMarkdownPreview('-\n  child'), '<ul><li>child</li></ul>');
   assert.equal(renderMarkdownPreview('1.\n   child'), '<ol start="1"><li>child</li></ol>');
-  assert.equal(renderMarkdownPreview('-\n\n  child'), '<ul><li><p>child</p></li></ul>');
+  assert.equal(renderMarkdownPreview('-\n\n  child'), '<ul><li></li></ul><p>child</p>');
 });
 
 test('blockquote markers accept up to three spaces including nested and continued quotes', () => {
@@ -720,4 +720,66 @@ test('link titles reject unescaped interior matching delimiters', () => {
 
 test('nested list tabs use the original line column', () => {
   assert.equal(renderMarkdownPreview('- -\t  x'), '<ul><li><ul><li>x</li></ul></li></ul>');
+});
+
+test('character references retain source delimiter flanking', () => {
+  assert.equal(renderMarkdownPreview('&#65;_foo_'), '<p>&#65;<em>foo</em></p>');
+  assert.equal(renderMarkdownPreview('_foo_&#65;'), '<p><em>foo</em>&#65;</p>');
+});
+
+test('reference links resolve full collapsed and shortcut labels', () => {
+  assert.equal(
+    renderMarkdownPreview('[guide][DOCS]\n\n[docs]: https://example.com "Guide"'),
+    '<p><a href="https://example.com" title="Guide" target="_blank" rel="noreferrer">guide</a></p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('[docs][] [docs]\n\n[docs]: https://example.com'),
+    '<p><a href="https://example.com" target="_blank" rel="noreferrer">docs</a> <a href="https://example.com" target="_blank" rel="noreferrer">docs</a></p>',
+  );
+  assert.doesNotMatch(renderMarkdownPreview('[unsafe]\n\n[unsafe]: javascript:alert(1)'), /<a /);
+  assert.equal(renderMarkdownPreview('[missing]'), '<p>[missing]</p>');
+});
+
+test('reference definitions inside code remain literal', () => {
+  assert.equal(
+    renderMarkdownPreview('[docs]\n\n~~~\n[docs]: https://example.com\n~~~'),
+    '<p>[docs]</p><pre class="markdown-code-block"><code>[docs]: https://example.com</code></pre>',
+  );
+});
+
+test('nested blank lines keep the enclosing list tight', () => {
+  assert.equal(
+    renderMarkdownPreview('- ```\n  a\n\n  b\n  ```\n- c'),
+    '<ul><li><pre class="markdown-code-block"><code>a\n\nb</code></pre></li><li>c</li></ul>',
+  );
+  assert.equal(
+    renderMarkdownPreview('- - a\n\n  - b\n- c'),
+    '<ul><li><ul><li><p>a</p></li><li><p>b</p></li></ul></li><li>c</li></ul>',
+  );
+});
+
+test('reference definitions use the first definition and span line breaks', () => {
+  assert.equal(
+    renderMarkdownPreview(
+      '[guide][  Some   Docs ]\n\n[Some Docs]:\n  https://example.com\n  "Guide"\n\n[Some Docs]: https://other.example',
+    ),
+    '<p><a href="https://example.com" title="Guide" target="_blank" rel="noreferrer">guide</a></p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('[docs]\n\n> [docs]: https://example.com'),
+    '<p><a href="https://example.com" target="_blank" rel="noreferrer">docs</a></p><blockquote></blockquote>',
+  );
+});
+
+test('reference definitions reject unbalanced bare destinations', () => {
+  assert.doesNotMatch(renderMarkdownPreview('[doc]\n\n[doc]: https://example.com/('), /<a /);
+  assert.match(
+    renderMarkdownPreview('[doc]\n\n[doc]: https://example.com/a(b)'),
+    /href="https:\/\/example.com\/a\(b\)"/,
+  );
+  assert.match(
+    renderMarkdownPreview('[doc]\n\n[doc]: https://example.com/a\\(b'),
+    /href="https:\/\/example.com\/a\(b"/,
+  );
+  assert.doesNotMatch(renderMarkdownPreview('[known][missing]\n\n[known]: https://example.com'), /<a /);
 });

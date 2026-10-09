@@ -65,6 +65,50 @@ function parseLinkDestination(text: string) {
   return { destination, title };
 }
 
+type MarkdownReferences = Map<string, NonNullable<ReturnType<typeof parseLinkDestination>>>;
+
+function normalizeReferenceLabel(label: string) {
+  return label.replace(/\s+/gu, ' ').trim().toUpperCase();
+}
+
+function referenceDefinition(lines: string[], index: number) {
+  const match = lines[index].match(/^ {0,3}\[((?:\\.|[^\[\]\\]){1,999})\]:[ \t]*(.*)$/u);
+  if (!match) return null;
+  let text = match[2];
+  let consumed = 1;
+  if (!text && lines[index + 1] && !/^[ \t]*$/u.test(lines[index + 1])) {
+    text = lines[index + 1].replace(/^[ \t]+/u, '');
+    consumed += 1;
+  }
+  if (!text) return null;
+  let link = parseLinkDestination(escapeHtml(text));
+  if (!link) return null;
+  if (!text.startsWith('<')) {
+    let parentheses = 0;
+    for (let offset = 0; offset < link.destination.length; offset += 1) {
+      const character = link.destination[offset];
+      if (character === '\\') offset += 1;
+      else if (character === '(') parentheses += 1;
+      else if (character === ')') {
+        if (parentheses === 0) return null;
+        parentheses -= 1;
+      } else if (link.destination.startsWith('&lt;', offset) || link.destination.startsWith('&gt;', offset))
+        return null;
+    }
+    if (parentheses !== 0) return null;
+  }
+  const next = lines[index + consumed];
+  if (link.title === null && next && /^[ \t]*["'(]/u.test(next)) {
+    const titled = parseLinkDestination(escapeHtml(text + '\n' + next.replace(/^[ \t]+/u, '')));
+    if (titled && titled.title !== null) {
+      link = titled;
+      consumed += 1;
+    }
+  }
+  const label = normalizeReferenceLabel(escapeHtml(match[1]));
+  return label ? { label, link, consumed } : null;
+}
+
 function formatEmphasis(text: string, escapedCharacter?: (index: number) => string | undefined) {
   const fragments: string[] = [];
   type Opener = {
@@ -253,6 +297,7 @@ function formatLinksAndCode(
   protect: (markup: string, source?: string) => string,
   allowLinks = true,
   emphasize: (value: string) => string = formatEmphasis,
+  references: MarkdownReferences = new Map(),
 ) {
   const codeEnds = codeSpanEnds(text);
   const pairs = delimiterPairs(text, codeEnds);
@@ -267,10 +312,23 @@ function formatLinksAndCode(
     const starts = [...pairs.keys()].filter((start) => text[start] === '[').sort((left, right) => right - left);
     for (const start of starts) {
       const labelEnd = pairs.get(start)!;
-      if (text[labelEnd + 1] !== '(') continue;
-      const end = pairs.get(labelEnd + 1);
-      if (end === undefined) continue;
-      const link = parseLinkDestination(text.slice(labelEnd + 2, end));
+      let end = labelEnd;
+      let link: ReturnType<typeof parseLinkDestination> = null;
+      if (text[labelEnd + 1] === '(') {
+        const inlineEnd = pairs.get(labelEnd + 1);
+        if (inlineEnd !== undefined) {
+          end = inlineEnd;
+          link = parseLinkDestination(text.slice(labelEnd + 2, end));
+        }
+      } else {
+        let label = text.slice(start + 1, labelEnd);
+        const referenceEnd = text[labelEnd + 1] === '[' ? pairs.get(labelEnd + 1) : undefined;
+        if (referenceEnd !== undefined) {
+          end = referenceEnd;
+          label = text.slice(labelEnd + 2, end) || label;
+        }
+        link = references.get(normalizeReferenceLabel(label)) ?? null;
+      }
       if (!link || (nearestInner && nearestInner.start < labelEnd && nearestInner.end < labelEnd)) continue;
       links.set(start, { labelEnd, end, link });
       nearestInner = { start, end };
@@ -369,7 +427,7 @@ function restoreMarkup(html: string, tokens: string[], prefix: string) {
   return result.join('');
 }
 
-function renderInlineMarkdown(text: string) {
+function renderInlineMarkdown(text: string, references: MarkdownReferences) {
   let html = escapeHtml(text);
   let prefix = '\uE000INLINE_TOKEN:';
   while (html.includes(prefix)) prefix += ':';
@@ -398,7 +456,7 @@ function renderInlineMarkdown(text: string) {
       const context = contexts[Number(value.slice(start + prefix.length, end))];
       return last ? context?.last : context?.first;
     });
-  html = formatLinksAndCode(html, protect, true, emphasize);
+  html = formatLinksAndCode(html, protect, true, emphasize, references);
   html = html.replace(/(?: {2,}|\\)\n/gu, () => protect('<br />', '\n')).replaceAll('\n', ' ');
   html = emphasize(html);
   return restoreMarkup(html, tokens, prefix);
@@ -499,7 +557,15 @@ function singleLineListChain(markdown: string): MarkdownBlockPart | null {
   };
 }
 
-function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): Generator<MarkdownBlockPart> {
+function* renderMarkdownBlockParts(
+  markdown: string,
+  tightParagraphs = false,
+  references: MarkdownReferences = new Map(),
+  collectReferences = false,
+  onBlock?: (blankBefore: boolean) => void,
+): Generator<MarkdownBlockPart> {
+  const renderInline = (text: string) => (collectReferences || onBlock ? '' : renderInlineMarkdown(text, references));
+  let blankBeforeBlock = false;
   const normalizedMarkdown = markdown.replace(/\r\n?/gu, '\n');
   const rawLines = normalizedMarkdown.split('\n');
   const lines = rawLines.map(expandLeadingIndentation);
@@ -516,9 +582,19 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
     const trimmedLine = line.replace(/^[ \t]+|[ \t]+$/gu, '');
 
     if (trimmedLine.length === 0) {
+      blankBeforeBlock = true;
       index += 1;
       continue;
     }
+
+    const definition = referenceDefinition(lines, index);
+    if (definition) {
+      if (collectReferences && !references.has(definition.label)) references.set(definition.label, definition.link);
+      index += definition.consumed;
+      continue;
+    }
+    onBlock?.(blankBeforeBlock);
+    blankBeforeBlock = false;
 
     if (isIndentedCode(line)) {
       const codeLines: string[] = [];
@@ -559,7 +635,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
 
     if (headingMatch) {
       const level = headingMatch[1].length;
-      yield `<h${level}>${renderInlineMarkdown(headingMatch[2].replace(/(?:^|[ \t]+)#+[ \t]*$/u, '').replace(/^[ \t]+|[ \t]+$/gu, ''))}</h${level}>`;
+      yield `<h${level}>${renderInline(headingMatch[2].replace(/(?:^|[ \t]+)#+[ \t]*$/u, '').replace(/^[ \t]+|[ \t]+$/gu, ''))}</h${level}>`;
       index += 1;
       continue;
     }
@@ -636,6 +712,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
         ? new RegExp(`^ {0,3}\\d{1,9}[${listMatch[1].at(-1)}](?:[ \\t]+(.*)|$)`, 'u')
         : new RegExp(`^ {0,3}[${listMatch[1]}](?:[ \\t]+(.*)|$)`, 'u');
       const items: string[][] = [];
+      const itemsWithBlank: string[][] = [];
       let loose = false;
       while (index < lines.length) {
         const match = lines[index].match(itemPattern);
@@ -653,6 +730,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
           contentIndent = markerEnd + 1;
         }
         const itemLines = [itemContent];
+        let itemHasBlank = false;
         let lazyParagraph = !isIndentedCode(itemContent) && !isParagraphBoundary(itemContent);
         const itemFence = matchCodeFence(itemContent);
         let closingItemFence = itemFence ? closingCodeFence(itemFence[1]) : null;
@@ -661,6 +739,12 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
           const continuation = lines[index];
           const indentation = continuation.match(/^ +/u)?.[0].length ?? 0;
           if (!continuation.replace(/^[ \t]+|[ \t]+$/gu, '')) {
+            if (closingItemFence) {
+              itemLines.push('');
+              index += 1;
+              continue;
+            }
+            if (!itemContent && itemLines.length === 1) break;
             let next = index + 1;
             while (next < lines.length && !lines[next].replace(/^[ \t]+|[ \t]+$/gu, '')) next += 1;
             if (
@@ -669,7 +753,10 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
             )
               break;
             itemLines.push('');
-            loose = true;
+            const nextIndent = lines[next].match(/^ +/u)?.[0].length ?? 0;
+            const separatesItems = itemPattern.test(lines[next]) && nextIndent < contentIndent;
+            loose ||= separatesItems;
+            itemHasBlank ||= !separatesItems;
             lazyParagraph = false;
           } else if (indentation >= contentIndent) {
             const content = stripIndentation(rawLines[index], contentIndent);
@@ -695,6 +782,19 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
           index += 1;
         }
         items.push(itemLines);
+        if (itemHasBlank) itemsWithBlank.push(itemLines);
+      }
+      if (!loose && !onBlock) {
+        for (const item of itemsWithBlank) {
+          let hadBlock = false;
+          for (const _part of renderMarkdownBlockParts(item.join('\n'), false, references, false, (blankBefore) => {
+            loose ||= hadBlock && blankBefore;
+            hadBlock = true;
+          })) {
+            if (loose) break;
+          }
+          if (loose) break;
+        }
       }
       yield ordered ? `<ol start="${Number.parseInt(listMatch[1], 10)}">` : '<ul>';
       for (const item of items) {
@@ -719,30 +819,30 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
     const underline = lines[index]?.match(/^ {0,3}(=+|-+)[ \t]*$/u);
     if (underline) {
       const level = underline[1][0] === '=' ? 1 : 2;
-      yield `<h${level}>${renderInlineMarkdown(paragraphLines.join('\n').replace(/^[ \t]+|[ \t]+$/gu, ''))}</h${level}>`;
+      yield `<h${level}>${renderInline(paragraphLines.join('\n').replace(/^[ \t]+|[ \t]+$/gu, ''))}</h${level}>`;
       index += 1;
     } else {
-      const paragraph = renderInlineMarkdown(paragraphLines.join('\n'));
+      const paragraph = renderInline(paragraphLines.join('\n'));
       yield tightParagraphs ? paragraph : `<p>${paragraph}</p>`;
     }
   }
 }
 
-function renderMarkdownBlocks(markdown: string) {
+function renderMarkdownBlocks(markdown: string, references: MarkdownReferences, collectReferences = false) {
   const html: string[] = [];
-  const frames = [{ parts: renderMarkdownBlockParts(markdown), closing: '' }];
+  const frames = [{ parts: renderMarkdownBlockParts(markdown, false, references, collectReferences), closing: '' }];
   while (frames.length > 0) {
     const frame = frames[frames.length - 1];
     const next = frame.parts.next();
     if (next.done) {
-      html.push(frame.closing);
+      if (!collectReferences) html.push(frame.closing);
       frames.pop();
     } else if (typeof next.value === 'string') {
-      html.push(next.value);
+      if (!collectReferences) html.push(next.value);
     } else {
-      html.push(next.value.opening);
+      if (!collectReferences) html.push(next.value.opening);
       frames.push({
-        parts: renderMarkdownBlockParts(next.value.markdown, next.value.tightParagraphs),
+        parts: renderMarkdownBlockParts(next.value.markdown, next.value.tightParagraphs, references, collectReferences),
         closing: next.value.closing,
       });
     }
@@ -751,8 +851,10 @@ function renderMarkdownBlocks(markdown: string) {
 }
 
 export function renderMarkdownPreview(markdown: string) {
+  const references: MarkdownReferences = new Map();
+  renderMarkdownBlocks(markdown, references, true);
   return (
-    renderMarkdownBlocks(markdown) ||
+    renderMarkdownBlocks(markdown, references) ||
     '<p class="document-preview__empty">Start typing to preview your markdown document.</p>'
   );
 }
