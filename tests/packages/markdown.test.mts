@@ -226,7 +226,7 @@ test('quoted link titles ignore internal parentheses and decode destination esca
 
 test('unmatched inner emphasis delimiters do not block enclosing spans', () => {
   assert.equal(renderMarkdownPreview('*foo _bar*'), '<p><em>foo _bar</em></p>');
-  assert.equal(renderMarkdownPreview('*foo **bar*'), '<p><em>foo **bar</em></p>');
+  assert.equal(renderMarkdownPreview('*foo **bar*'), '<p>*foo *<em>bar</em></p>');
   assert.equal(renderMarkdownPreview('*foo _bar* baz_'), '<p><em>foo _bar</em> baz_</p>');
 });
 
@@ -270,6 +270,13 @@ test('toolbar emphasis leaves selected whitespace outside the delimiters', () =>
     for (const selected of ['word ', ' word', '\tword \n']) {
       const wrapped = wrapMarkdownText(selected, 0, selected.length, marker, marker, 'fallback');
       assert.equal(wrapped.content.slice(wrapped.selectionStart, wrapped.selectionEnd), 'word');
+      if (selected.startsWith('\t')) {
+        assert.equal(
+          renderMarkdownPreview(wrapped.content),
+          `<pre class="markdown-code-block"><code>${marker}word${marker} </code></pre>`,
+        );
+        continue;
+      }
       assert.match(
         renderMarkdownPreview(wrapped.content),
         marker === '**' ? /<strong>word<\/strong>/ : /<em>word<\/em>/,
@@ -517,4 +524,75 @@ test('standalone CR and CRLF line endings preserve the same blocks as LF', () =>
   const expected = renderMarkdownPreview(source);
   assert.equal(renderMarkdownPreview(source.replaceAll('\n', '\r')), expected);
   assert.equal(renderMarkdownPreview(source.replaceAll('\n', '\r\n')), expected);
+});
+
+test('angle destinations skip escaped closing brackets', () => {
+  assert.equal(
+    renderMarkdownPreview('[x](<https://example.com/a\\>b>)'),
+    '<p><a href="https://example.com/a&gt;b" target="_blank" rel="noreferrer">x</a></p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('[x](<https://example.com/a\\>b(c)>)'),
+    '<p><a href="https://example.com/a&gt;b(c)" target="_blank" rel="noreferrer">x</a></p>',
+  );
+});
+
+test('indented blocks preserve code and literal Markdown markers', () => {
+  assert.equal(
+    renderMarkdownPreview('    ---\n    code'),
+    '<pre class="markdown-code-block"><code>---\ncode</code></pre>',
+  );
+  assert.equal(
+    renderMarkdownPreview('    first\n\n    second\n\nparagraph'),
+    '<pre class="markdown-code-block"><code>first\n\nsecond</code></pre><p>paragraph</p>',
+  );
+  assert.equal(renderMarkdownPreview('paragraph\n    continuation'), '<p>paragraph continuation</p>');
+});
+
+test('ordered markers contain at most nine digits in every context', () => {
+  assert.equal(renderMarkdownPreview('1234567890. item'), '<p>1234567890. item</p>');
+  assert.equal(renderMarkdownPreview('123456789. item'), '<ol start="123456789"><li>item</li></ol>');
+  assert.equal(renderMarkdownPreview('- 1234567890. item'), '<ul><li>1234567890. item</li></ul>');
+  assert.equal(
+    renderMarkdownPreview('1. first\n1234567890. next'),
+    '<ol start="1"><li>first 1234567890. next</li></ol>',
+  );
+});
+
+test('nested blockquotes do not pull outer lazy paragraphs into inner quotes', () => {
+  assert.equal(
+    renderMarkdownPreview('> > paragraph\ncontinuation'),
+    '<blockquote><blockquote><p>paragraph</p></blockquote></blockquote><p>continuation</p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('> > paragraph\n> continuation'),
+    '<blockquote><blockquote><p>paragraph continuation</p></blockquote></blockquote>',
+  );
+});
+
+test('code toolbar reuses selected boundary newlines', async () => {
+  const { insertCodeFence } = await import('../../src/platform/shared/markdown-editing.ts');
+  for (const source of ['code\n', '\ncode', '\ncode\n']) {
+    const result = insertCodeFence(source, 0, source.length);
+    assert.equal(result.content, '```\ncode\n```');
+    assert.equal(result.content.slice(result.selectionStart, result.selectionEnd), 'code');
+  }
+});
+
+test('triple emphasis adapts its nesting to later closers', () => {
+  assert.equal(renderMarkdownPreview('***foo* bar**'), '<p><strong><em>foo</em> bar</strong></p>');
+  assert.equal(renderMarkdownPreview('***foo** bar*'), '<p><em><strong>foo</strong> bar</em></p>');
+  assert.equal(renderMarkdownPreview('***foo***'), '<p><em><strong>foo</strong></em></p>');
+});
+
+test('blank list items cannot interrupt an existing paragraph', () => {
+  for (const marker of ['+', '*', '1.', '1)'])
+    assert.equal(renderMarkdownPreview(`paragraph\n${marker}   `), `<p>paragraph ${marker}   </p>`);
+  assert.equal(renderMarkdownPreview('paragraph\n-   '), '<h2>paragraph</h2>');
+  assert.equal(renderMarkdownPreview('paragraph\n\n+   '), '<p>paragraph</p><ul><li></li></ul>');
+});
+
+test('escaped punctuation retains its emphasis flanking classification', () => {
+  assert.equal(renderMarkdownPreview('_foo_\\! _foo_\\.'), '<p><em>foo</em>! <em>foo</em>.</p>');
+  assert.equal(renderMarkdownPreview('\\!_foo_'), '<p>!<em>foo</em></p>');
 });

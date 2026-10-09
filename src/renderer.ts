@@ -696,7 +696,7 @@ function createDocumentsScreen() {
   [
     { label: 'Words', value: wordCount.toLocaleString() },
     { label: 'Characters', value: characterCount.toLocaleString() },
-    { label: 'Lines', value: content.length === 0 ? '0' : content.split('\n').length.toLocaleString() },
+    { label: 'Lines', value: content.length === 0 ? '0' : content.split(/\r\n|\r|\n/u).length.toLocaleString() },
   ].forEach((item) => {
     const stat = document.createElement('div');
     stat.className = 'document-stat';

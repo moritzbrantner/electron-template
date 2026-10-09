@@ -20,7 +20,10 @@ export function wrapMarkdownText(
 }
 
 export function insertCodeFence(text: string, start: number, end: number) {
-  const selected = text.slice(start, end) || 'code block';
+  const rawSelection = text.slice(start, end);
+  const leadingNewline = rawSelection.startsWith('\n') ? 1 : 0;
+  const trailingNewline = rawSelection.endsWith('\n') ? 1 : 0;
+  const selected = rawSelection.slice(leadingNewline, rawSelection.length - trailingNewline) || 'code block';
   let longestRun = 0;
   for (const match of selected.matchAll(/`+/gu)) longestRun = Math.max(longestRun, match[0].length);
   const fence = '`'.repeat(Math.max(3, longestRun + 1));

@@ -17,11 +17,20 @@ function sanitizeMarkdownHref(href: string) {
   return trimmedHref;
 }
 
+function unescapedAngleEnd(text: string, start: number) {
+  for (let index = start; index < text.length; index += 1) {
+    if (text[index] === '\\') {
+      index += text.startsWith('&gt;', index + 1) ? 4 : 1;
+    } else if (text.startsWith('&gt;', index)) return index;
+  }
+  return -1;
+}
+
 function parseLinkDestination(text: string) {
   let destination: string;
   let remainder: string;
   if (text.startsWith('&lt;')) {
-    const end = text.indexOf('&gt;', 4);
+    const end = unescapedAngleEnd(text, 4);
     if (end === -1) return null;
     destination = text.slice(4, end);
     remainder = text.slice(end + 4).trim();
@@ -47,12 +56,21 @@ function parseLinkDestination(text: string) {
   return { destination, title };
 }
 
-function formatEmphasis(text: string) {
+function formatEmphasis(text: string, escapedCharacter?: (index: number) => string | undefined) {
   const fragments: string[] = [];
-  const openers: { marker: string; width: number; fragment: number; runLength: number; canClose: boolean }[] = [];
+  type Opener = {
+    marker: string;
+    remaining: number;
+    fragment: number;
+    runLength: number;
+    canClose: boolean;
+    tags: string[];
+  };
+  const openers: Opener[] = [];
+  const allOpeners: Opener[] = [];
   const indices = new Map<string, number[]>();
-  const bucket = (marker: string, width: number, modulo: number, canClose: boolean) => {
-    const key = `${marker}:${width}:${modulo}:${canClose}`;
+  const bucket = (marker: string, modulo: number, canClose: boolean) => {
+    const key = `${marker}:${modulo}:${canClose}`;
     let values = indices.get(key);
     if (!values) {
       values = [];
@@ -62,10 +80,10 @@ function formatEmphasis(text: string) {
   };
   const popOpener = () => {
     const opener = openers.pop()!;
-    bucket(opener.marker, opener.width, opener.runLength % 3, opener.canClose).pop();
+    bucket(opener.marker, opener.runLength % 3, opener.canClose).pop();
     return opener;
   };
-  const findOpener = (marker: string, width: number, runLength: number, canOpen: boolean) => {
+  const findOpener = (marker: string, runLength: number, canOpen: boolean) => {
     let newest = -1;
     for (let modulo = 0; modulo < 3; modulo += 1) {
       for (const openerCanClose of [false, true]) {
@@ -76,7 +94,7 @@ function formatEmphasis(text: string) {
           (modulo !== 0 || runLength % 3 !== 0)
         )
           continue;
-        newest = Math.max(newest, bucket(marker, width, modulo, openerCanClose).at(-1) ?? -1);
+        newest = Math.max(newest, bucket(marker, modulo, openerCanClose).at(-1) ?? -1);
       }
     }
     return newest;
@@ -93,8 +111,8 @@ function formatEmphasis(text: string) {
     fragments.push(text.slice(cursor, index));
     const runLength = end - index;
     let remaining = runLength;
-    const before = text[index - 1];
-    const after = text[end];
+    const before = escapedCharacter?.(index - 1) ?? text[index - 1];
+    const after = escapedCharacter?.(end) ?? text[end];
     const beforeSpace = before === undefined || /\s/u.test(before);
     const afterSpace = after === undefined || /\s/u.test(after);
     const beforePunctuation = before !== undefined && /[\p{P}\p{S}]/u.test(before);
@@ -104,36 +122,33 @@ function formatEmphasis(text: string) {
     const canClose = marker === '_' ? rightFlanking && (!leftFlanking || afterPunctuation) : rightFlanking;
     const canOpen = marker === '_' ? leftFlanking && (!rightFlanking || beforePunctuation) : leftFlanking;
     if (canClose) {
-      while (remaining > 0) {
-        const single = marker === '~' ? -1 : findOpener(marker, 1, runLength, canOpen);
-        const double = remaining >= 2 ? findOpener(marker, 2, runLength, canOpen) : -1;
-        const openerIndex = Math.max(single, double);
-        if (openerIndex === -1) break;
-        // Unmatched inner openers stay literal; discard their stack entries so
-        // later closers cannot create crossing spans. Each opener is removed once.
-        while (openers.length - 1 > openerIndex) popOpener();
-        const opener = popOpener();
-        const tag = marker === '~' ? 'del' : opener.width === 2 ? 'strong' : 'em';
-        fragments[opener.fragment] = `<${tag}>`;
-        fragments.push(`</${tag}>`);
-        remaining -= opener.width;
-      }
-    }
-    if (canOpen) {
       while (remaining >= (marker === '~' ? 2 : 1)) {
-        // An odd asterisk run opens emphasis around its inner strong pairs.
-        const width = marker !== '~' && remaining % 2 === 1 ? 1 : 2;
-        bucket(marker, width, runLength % 3, canClose).push(openers.length);
-        openers.push({ marker, width, fragment: fragments.length, runLength, canClose });
-        fragments.push(marker.repeat(width));
+        const openerIndex = findOpener(marker, runLength, canOpen);
+        if (openerIndex === -1) break;
+        while (openers.length - 1 > openerIndex) popOpener();
+        const opener = openers[openerIndex];
+        const width = remaining >= 2 && opener.remaining >= 2 ? 2 : 1;
+        const tag = marker === '~' ? 'del' : width === 2 ? 'strong' : 'em';
+        opener.tags.push(`<${tag}>`);
+        fragments.push(`</${tag}>`);
+        opener.remaining -= width;
         remaining -= width;
+        if (opener.remaining < (marker === '~' ? 2 : 1)) popOpener();
       }
     }
-    fragments.push(marker.repeat(remaining));
+    if (canOpen && remaining >= (marker === '~' ? 2 : 1)) {
+      const opener = { marker, remaining, fragment: fragments.length, runLength, canClose, tags: [] };
+      bucket(marker, runLength % 3, canClose).push(openers.length);
+      openers.push(opener);
+      allOpeners.push(opener);
+      fragments.push('');
+    } else fragments.push(marker.repeat(remaining));
     cursor = end;
     index = end;
   }
   fragments.push(text.slice(cursor));
+  for (const opener of allOpeners)
+    fragments[opener.fragment] = opener.marker.repeat(opener.remaining) + opener.tags.reverse().join('');
   return fragments.join('');
 }
 
@@ -141,7 +156,7 @@ function delimiterPairs(text: string, codeEnds: Map<number, number>) {
   const pairs = new Map<number, number>();
   const brackets: number[] = [];
   const parentheses: number[] = [];
-  let nextAngleEnd = text.indexOf('&gt;');
+  let nextAngleEnd = unescapedAngleEnd(text, 0);
   for (let index = 0; index < text.length; index += 1) {
     if (text[index] === '\\') {
       index += 1;
@@ -156,7 +171,7 @@ function delimiterPairs(text: string, codeEnds: Map<number, number>) {
     }
     if (parentheses.length > 0 && text.startsWith('&lt;', index) && text[index - 1] === '(') {
       while (nextAngleEnd !== -1 && nextAngleEnd < index) {
-        nextAngleEnd = text.indexOf('&gt;', nextAngleEnd + 4);
+        nextAngleEnd = unescapedAngleEnd(text, nextAngleEnd + 4);
       }
       if (nextAngleEnd !== -1) {
         index = nextAngleEnd + 3;
@@ -332,7 +347,19 @@ function renderInlineMarkdown(text: string) {
   };
   html = formatLinksAndCode(html, protect);
   html = html.replace(/(?: {2,}|\\)\n/gu, () => protect('<br />')).replaceAll('\n', ' ');
-  html = formatEmphasis(html);
+  html = formatEmphasis(html, (index) => {
+    let start: number;
+    let end: number;
+    if (html[index] === '\uE001') {
+      start = html.lastIndexOf(prefix, index);
+      end = index;
+    } else if (html.startsWith(prefix, index)) {
+      start = index;
+      end = html.indexOf('\uE001', index);
+    } else return undefined;
+    const value = tokens[Number(html.slice(start + prefix.length, end))];
+    return value?.length === 1 ? value : undefined;
+  });
   return restoreMarkup(html, tokens, prefix);
 }
 
@@ -350,8 +377,8 @@ function isParagraphBoundary(line: string, interruptingParagraph = false) {
     line.trim().length === 0 ||
     /^ {0,3}(#{1,6})(?:[ \t]+|$)/u.test(line) ||
     /^ {0,3}>[ \t]?/u.test(line) ||
-    /^ {0,3}([-*+])\s+/u.test(line) ||
-    (interruptingParagraph ? /^ {0,3}1[.)]\s+/u : /^ {0,3}\d+[.)]\s+/u).test(line) ||
+    (interruptingParagraph ? /^ {0,3}[-*+][ \t]+\S/u : /^ {0,3}[-*+][ \t]+/u).test(line) ||
+    (interruptingParagraph ? /^ {0,3}1[.)][ \t]+\S/u : /^ {0,3}\d{1,9}[.)][ \t]+/u).test(line) ||
     Boolean(matchCodeFence(line)) ||
     /^([*_-])(?:\s*\1){2,}\s*$/u.test(line.trim())
   );
@@ -374,7 +401,7 @@ function singleLineListChain(markdown: string): MarkdownBlockPart | null {
     thematicStart -= 1;
   }
   if (thematicCount < 3) thematicStart = markdown.length;
-  const pattern = /([-*+]|\d+[.)])\s+/gy;
+  const pattern = /([-*+]|\d{1,9}[.)])\s+/gy;
   const openings: string[] = [];
   const closings: string[] = [];
   let cursor = 0;
@@ -412,6 +439,17 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
 
     if (trimmedLine.length === 0) {
       index += 1;
+      continue;
+    }
+
+    if (/^(?: {4}|\t)/u.test(line)) {
+      const codeLines: string[] = [];
+      while (index < lines.length && (/^(?: {4}|\t)/u.test(lines[index]) || !lines[index].trim())) {
+        codeLines.push(lines[index].replace(/^(?: {4}|\t)/u, ''));
+        index += 1;
+      }
+      while (codeLines.at(-1)?.trim() === '') codeLines.pop();
+      yield `<pre class="markdown-code-block"><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`;
       continue;
     }
 
@@ -461,7 +499,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
         const quoteLine = lines[index];
         if (/^ {0,3}>[ \t]?/u.test(quoteLine)) {
           quoteLines.push(quoteLine);
-          const content = quoteLine.replace(/^(?: {0,3}>[ \t]?)+/u, '');
+          const content = quoteLine.replace(/^ {0,3}>[ \t]?/u, '');
           const fence = matchCodeFence(content);
           if (quoteFence) {
             if (quoteFence.test(content)) quoteFence = null;
@@ -508,11 +546,11 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
       continue;
     }
 
-    const listMatch = line.match(/^ {0,3}([-*+]|\d+[.)])(?:[ \t]+(.*)|$)/u);
+    const listMatch = line.match(/^ {0,3}([-*+]|\d{1,9}[.)])(?:[ \t]+(.*)|$)/u);
     if (listMatch) {
       const ordered = /^\d/u.test(listMatch[1]);
       const itemPattern = ordered
-        ? new RegExp(`^ {0,3}\\d+[${listMatch[1].at(-1)}](?:[ \\t]+(.*)|$)`, 'u')
+        ? new RegExp(`^ {0,3}\\d{1,9}[${listMatch[1].at(-1)}](?:[ \\t]+(.*)|$)`, 'u')
         : new RegExp(`^ {0,3}[${listMatch[1]}](?:[ \\t]+(.*)|$)`, 'u');
       const items: string[][] = [];
       let loose = false;
@@ -552,7 +590,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
               lazyParagraph =
                 !isParagraphBoundary(content.trimStart(), lazyParagraph) && !/^(?:=+|-+)\s*$/u.test(content.trim());
             }
-          } else if (itemPattern.test(continuation) || (ordered && /^\d+[.)]\s+/u.test(continuation))) {
+          } else if (itemPattern.test(continuation) || (ordered && /^\d{1,9}[.)]\s+/u.test(continuation))) {
             break;
           } else if (lazyParagraph && !isParagraphBoundary(continuation.trimStart(), true)) {
             itemLines.push(continuation.trimStart());
