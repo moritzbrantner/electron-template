@@ -596,3 +596,37 @@ test('escaped punctuation retains its emphasis flanking classification', () => {
   assert.equal(renderMarkdownPreview('_foo_\\! _foo_\\.'), '<p><em>foo</em>! <em>foo</em>.</p>');
   assert.equal(renderMarkdownPreview('\\!_foo_'), '<p>!<em>foo</em></p>');
 });
+
+test('excess list padding belongs to indented code content', () => {
+  assert.equal(
+    renderMarkdownPreview('-     foo'),
+    '<ul><li><pre class="markdown-code-block"><code>foo</code></pre></li></ul>',
+  );
+  assert.equal(
+    renderMarkdownPreview('1.     foo'),
+    '<ol start="1"><li><pre class="markdown-code-block"><code>foo</code></pre></li></ol>',
+  );
+  assert.equal(
+    renderMarkdownPreview('- -     foo'),
+    '<ul><li><ul><li><pre class="markdown-code-block"><code>foo</code></pre></li></ul></li></ul>',
+  );
+  assert.equal(
+    renderMarkdownPreview('-     foo\n  outside'),
+    '<ul><li><pre class="markdown-code-block"><code>foo</code></pre>outside</li></ul>',
+  );
+});
+
+test('indented quote code cannot lazily absorb outside prose', () => {
+  assert.equal(
+    renderMarkdownPreview('>     code\noutside'),
+    '<blockquote><pre class="markdown-code-block"><code>code</code></pre></blockquote><p>outside</p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('>     code\n>     next\noutside'),
+    '<blockquote><pre class="markdown-code-block"><code>code\nnext</code></pre></blockquote><p>outside</p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('-     code\noutside'),
+    '<ul><li><pre class="markdown-code-block"><code>code</code></pre></li></ul><p>outside</p>',
+  );
+});

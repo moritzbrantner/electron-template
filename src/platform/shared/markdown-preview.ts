@@ -372,6 +372,16 @@ function closingCodeFence(marker: string) {
   return new RegExp('^ {0,3}' + marker[0] + '{' + marker.length + ',}\\s*$', 'u');
 }
 
+function isIndentedCode(line: string) {
+  return /^(?: {4}|\t)/u.test(line);
+}
+
+function listPaddingWidth(padding: string, startingColumn: number) {
+  let column = startingColumn;
+  for (const character of padding) column += character === '\t' ? 4 - (column % 4) : 1;
+  return column - startingColumn;
+}
+
 function isParagraphBoundary(line: string, interruptingParagraph = false) {
   return (
     line.trim().length === 0 ||
@@ -401,13 +411,13 @@ function singleLineListChain(markdown: string): MarkdownBlockPart | null {
     thematicStart -= 1;
   }
   if (thematicCount < 3) thematicStart = markdown.length;
-  const pattern = /([-*+]|\d{1,9}[.)])\s+/gy;
+  const pattern = /([-*+]|\d{1,9}[.)])([ \t]+)/gy;
   const openings: string[] = [];
   const closings: string[] = [];
   let cursor = 0;
   while (cursor < thematicStart) {
     const match = pattern.exec(markdown);
-    if (!match) break;
+    if (!match || listPaddingWidth(match[2], match.index + match[1].length) > 4) break;
     const ordered = /^\d/u.test(match[1]);
     openings.push(ordered ? `<ol start="${Number.parseInt(match[1], 10)}"><li>` : '<ul><li>');
     closings.push(ordered ? '</li></ol>' : '</li></ul>');
@@ -442,7 +452,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
       continue;
     }
 
-    if (/^(?: {4}|\t)/u.test(line)) {
+    if (isIndentedCode(line)) {
       const codeLines: string[] = [];
       while (index < lines.length && (/^(?: {4}|\t)/u.test(lines[index]) || !lines[index].trim())) {
         codeLines.push(lines[index].replace(/^(?: {4}|\t)/u, ''));
@@ -508,7 +518,8 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
             quoteFence = closingCodeFence(fence[1]);
             lazyParagraph = false;
           } else {
-            lazyParagraph = !isParagraphBoundary(content, true) && !/^(?:=+|-+)\s*$/u.test(content);
+            lazyParagraph =
+              !isIndentedCode(content) && !isParagraphBoundary(content, true) && !/^(?:=+|-+)\s*$/u.test(content);
           }
         } else if (lazyParagraph && !isParagraphBoundary(quoteLine, true)) {
           quoteLines.push('> ' + quoteLine);
@@ -557,10 +568,17 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
       while (index < lines.length) {
         const match = lines[index].match(itemPattern);
         if (!match) break;
-        const itemContent = match[1] ?? '';
-        const contentIndent = itemContent ? match[0].length - itemContent.length : match[0].trimEnd().length + 1;
+        let itemContent = match[1] ?? '';
+        let contentIndent = itemContent ? match[0].length - itemContent.length : match[0].trimEnd().length + 1;
+        const markerEnd = lines[index].match(/^ {0,3}(?:[-*+]|\d{1,9}[.)])/u)![0].length;
+        const padding = lines[index].slice(markerEnd, contentIndent);
+        const paddingWidth = listPaddingWidth(padding, markerEnd);
+        if (itemContent && paddingWidth > 4) {
+          itemContent = ' '.repeat(paddingWidth - 1) + itemContent;
+          contentIndent = markerEnd + 1;
+        }
         const itemLines = [itemContent];
-        let lazyParagraph = !isParagraphBoundary(itemContent);
+        let lazyParagraph = !isIndentedCode(itemContent) && !isParagraphBoundary(itemContent);
         const itemFence = matchCodeFence(itemContent);
         let closingItemFence = itemFence ? closingCodeFence(itemFence[1]) : null;
         index += 1;
@@ -588,7 +606,9 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
               const fence = matchCodeFence(content);
               closingItemFence = fence ? closingCodeFence(fence[1]) : null;
               lazyParagraph =
-                !isParagraphBoundary(content.trimStart(), lazyParagraph) && !/^(?:=+|-+)\s*$/u.test(content.trim());
+                !isIndentedCode(content) &&
+                !isParagraphBoundary(content.trimStart(), lazyParagraph) &&
+                !/^(?:=+|-+)\s*$/u.test(content.trim());
             }
           } else if (itemPattern.test(continuation) || (ordered && /^\d{1,9}[.)]\s+/u.test(continuation))) {
             break;
