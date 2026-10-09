@@ -478,3 +478,43 @@ test('angle-bracket URI and email autolinks retain the existing safe scheme poli
   assert.doesNotMatch(renderMarkdownPreview('<javascript:alert(1)> <data:text/html,test>'), /<a /u);
   assert.doesNotMatch(renderMarkdownPreview('&lt;https://example.com&gt;'), /<a /u);
 });
+
+test('a marker-only list item with indented content stays tight until a real separator', () => {
+  assert.equal(renderMarkdownPreview('-\n  child'), '<ul><li>child</li></ul>');
+  assert.equal(renderMarkdownPreview('1.\n   child'), '<ol start="1"><li>child</li></ol>');
+  assert.equal(renderMarkdownPreview('-\n\n  child'), '<ul><li><p>child</p></li></ul>');
+});
+
+test('blockquote markers accept up to three spaces including nested and continued quotes', () => {
+  for (let indent = 0; indent <= 3; indent += 1) {
+    assert.equal(renderMarkdownPreview(`${' '.repeat(indent)}> quoted`), '<blockquote><p>quoted</p></blockquote>');
+    assert.equal(
+      renderMarkdownPreview(`paragraph\n${' '.repeat(indent)}> quoted`),
+      '<p>paragraph</p><blockquote><p>quoted</p></blockquote>',
+    );
+  }
+  assert.equal(
+    renderMarkdownPreview('   >   > nested'),
+    '<blockquote><blockquote><p>nested</p></blockquote></blockquote>',
+  );
+  assert.equal(renderMarkdownPreview('> first\n   > second'), '<blockquote><p>first second</p></blockquote>');
+});
+
+test('list markers accept up to three spaces without losing their content indentation', () => {
+  for (let indent = 0; indent <= 3; indent += 1) {
+    const prefix = ' '.repeat(indent);
+    assert.equal(renderMarkdownPreview(`${prefix}- one\n${prefix}- two`), '<ul><li>one</li><li>two</li></ul>');
+    assert.equal(
+      renderMarkdownPreview(`${prefix}1. one\n${prefix}2. two`),
+      '<ol start="1"><li>one</li><li>two</li></ol>',
+    );
+    assert.equal(renderMarkdownPreview(`${prefix}-\n${' '.repeat(indent + 2)}child`), '<ul><li>child</li></ul>');
+  }
+});
+
+test('standalone CR and CRLF line endings preserve the same blocks as LF', () => {
+  const source = '# Heading\n\n- one\n- two\n';
+  const expected = renderMarkdownPreview(source);
+  assert.equal(renderMarkdownPreview(source.replaceAll('\n', '\r')), expected);
+  assert.equal(renderMarkdownPreview(source.replaceAll('\n', '\r\n')), expected);
+});

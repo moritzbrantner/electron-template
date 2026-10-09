@@ -349,9 +349,9 @@ function isParagraphBoundary(line: string, interruptingParagraph = false) {
   return (
     line.trim().length === 0 ||
     /^ {0,3}(#{1,6})(?:[ \t]+|$)/u.test(line) ||
-    /^>\s?/u.test(line) ||
-    /^([-*+])\s+/u.test(line) ||
-    (interruptingParagraph ? /^1[.)]\s+/u : /^\d+[.)]\s+/u).test(line) ||
+    /^ {0,3}>[ \t]?/u.test(line) ||
+    /^ {0,3}([-*+])\s+/u.test(line) ||
+    (interruptingParagraph ? /^ {0,3}1[.)]\s+/u : /^ {0,3}\d+[.)]\s+/u).test(line) ||
     Boolean(matchCodeFence(line)) ||
     /^([*_-])(?:\s*\1){2,}\s*$/u.test(line.trim())
   );
@@ -396,7 +396,7 @@ function singleLineListChain(markdown: string): MarkdownBlockPart | null {
 }
 
 function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): Generator<MarkdownBlockPart> {
-  const normalizedMarkdown = markdown.replaceAll('\r\n', '\n');
+  const normalizedMarkdown = markdown.replace(/\r\n?/gu, '\n');
   const lines = normalizedMarkdown.split('\n');
   if (lines.length === 1) {
     const chain = singleLineListChain(normalizedMarkdown);
@@ -452,16 +452,16 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
       continue;
     }
 
-    if (/^>\s?/u.test(line)) {
+    if (/^ {0,3}>[ \t]?/u.test(line)) {
       const quoteLines: string[] = [];
 
       let lazyParagraph = false;
       let quoteFence: RegExp | null = null;
       while (index < lines.length) {
         const quoteLine = lines[index];
-        if (/^>\s?/u.test(quoteLine)) {
+        if (/^ {0,3}>[ \t]?/u.test(quoteLine)) {
           quoteLines.push(quoteLine);
-          const content = quoteLine.replace(/^(?:>\s?)+/u, '');
+          const content = quoteLine.replace(/^(?: {0,3}>[ \t]?)+/u, '');
           const fence = matchCodeFence(content);
           if (quoteFence) {
             if (quoteFence.test(content)) quoteFence = null;
@@ -482,7 +482,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
 
       // Consume the shared quote prefix in one pass, including very deep quotes.
       const depth = quoteLines.reduce((minimumDepth, quoteLine) => {
-        const prefix = quoteLine.match(/^(?:>\s?)+/u)?.[0] ?? '';
+        const prefix = quoteLine.match(/^(?: {0,3}>[ \t]?)+/u)?.[0] ?? '';
         let quoteDepth = 0;
         for (const character of prefix) if (character === '>') quoteDepth += 1;
         return Math.min(minimumDepth, quoteDepth);
@@ -490,8 +490,13 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
       const strippedLines = quoteLines.map((quoteLine) => {
         let offset = 0;
         for (let level = 0; level < depth; level += 1) {
+          let indentation = 0;
+          while (indentation < 3 && quoteLine[offset] === ' ') {
+            offset += 1;
+            indentation += 1;
+          }
           offset += 1;
-          if (/\s/u.test(quoteLine[offset] ?? '')) offset += 1;
+          if (/[ \t]/u.test(quoteLine[offset] ?? '')) offset += 1;
         }
         return quoteLine.slice(offset);
       });
@@ -503,18 +508,19 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
       continue;
     }
 
-    const listMatch = line.match(/^([-*+]|\d+[.)])(?:[ \t]+(.*)|$)/u);
+    const listMatch = line.match(/^ {0,3}([-*+]|\d+[.)])(?:[ \t]+(.*)|$)/u);
     if (listMatch) {
       const ordered = /^\d/u.test(listMatch[1]);
       const itemPattern = ordered
-        ? new RegExp(`^\\d+[${listMatch[1].at(-1)}](?:[ \\t]+(.*)|$)`, 'u')
-        : new RegExp(`^[${listMatch[1]}](?:[ \\t]+(.*)|$)`, 'u');
+        ? new RegExp(`^ {0,3}\\d+[${listMatch[1].at(-1)}](?:[ \\t]+(.*)|$)`, 'u')
+        : new RegExp(`^ {0,3}[${listMatch[1]}](?:[ \\t]+(.*)|$)`, 'u');
       const items: string[][] = [];
+      let loose = false;
       while (index < lines.length) {
         const match = lines[index].match(itemPattern);
         if (!match) break;
         const itemContent = match[1] ?? '';
-        const contentIndent = itemContent ? match[0].length - itemContent.length : listMatch[1].length + 1;
+        const contentIndent = itemContent ? match[0].length - itemContent.length : match[0].trimEnd().length + 1;
         const itemLines = [itemContent];
         let lazyParagraph = !isParagraphBoundary(itemContent);
         const itemFence = matchCodeFence(itemContent);
@@ -532,6 +538,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
             )
               break;
             itemLines.push('');
+            loose = true;
             lazyParagraph = false;
           } else if (indentation >= contentIndent) {
             const content = continuation.slice(contentIndent);
@@ -556,7 +563,6 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
         }
         items.push(itemLines);
       }
-      const loose = items.some((item) => item.length > 1 && item.includes(''));
       yield ordered ? `<ol start="${Number.parseInt(listMatch[1], 10)}">` : '<ul>';
       for (const item of items) {
         yield { markdown: item.join('\n'), opening: '<li>', closing: '</li>', tightParagraphs: !loose };
