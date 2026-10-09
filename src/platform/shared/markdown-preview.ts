@@ -33,6 +33,10 @@ function parseLinkDestination(text: string) {
     const end = unescapedAngleEnd(text, 4);
     if (end === -1) return null;
     destination = text.slice(4, end);
+    for (let index = 0; index < destination.length; index += 1) {
+      if (destination[index] === '\\') index += 1;
+      else if (/[\r\n]/u.test(destination[index]) || destination.startsWith('&lt;', index)) return null;
+    }
     remainder = text.slice(end + 4).trim();
   } else {
     const end = text.search(/\s/u);
@@ -52,6 +56,11 @@ function parseLinkDestination(text: string) {
     );
     if (!pair) return null;
     title = remainder.slice(pair[0].length, -pair[1].length);
+    for (let index = 0; index < title.length; index += 1) {
+      if (title[index] === '\\') {
+        index += title.startsWith('&quot;', index + 1) ? 6 : 1;
+      } else if (title.startsWith(pair[1], index) || (pair[0] === '(' && title[index] === '(')) return null;
+    }
   }
   return { destination, title };
 }
@@ -401,7 +410,7 @@ function matchCodeFence(line: string) {
 }
 
 function closingCodeFence(marker: string) {
-  return new RegExp('^ {0,3}' + marker[0] + '{' + marker.length + ',}\\s*$', 'u');
+  return new RegExp('^ {0,3}' + marker[0] + '{' + marker.length + ',}[ \\t]*$', 'u');
 }
 
 function isIndentedCode(line: string) {
@@ -414,9 +423,35 @@ function listPaddingWidth(padding: string, startingColumn: number) {
   return column - startingColumn;
 }
 
+function expandLeadingIndentation(line: string) {
+  return line.replace(/^[ \t]+/u, (indentation) => ' '.repeat(listPaddingWidth(indentation, 0)));
+}
+
+function stripIndentation(line: string, width: number) {
+  let column = 0;
+  let offset = 0;
+  while (column < width && /[ \t]/u.test(line[offset] ?? '')) {
+    column += line[offset] === '\t' ? 4 - (column % 4) : 1;
+    offset += 1;
+  }
+  return ' '.repeat(Math.max(0, column - width)) + line.slice(offset);
+}
+
+function expandQuoteMarkerTabs(line: string) {
+  const prefix = line.match(/^(?: {0,3}>[ \t]?)+/u)?.[0] ?? '';
+  let column = 0;
+  const expanded: string[] = [];
+  for (const character of prefix) {
+    const width = character === '\t' ? 4 - (column % 4) : 1;
+    expanded.push(character === '\t' ? ' '.repeat(width) : character);
+    column += width;
+  }
+  return expanded.join('') + line.slice(prefix.length);
+}
+
 function isParagraphBoundary(line: string, interruptingParagraph = false) {
   return (
-    line.trim().length === 0 ||
+    /^[ \t]*$/u.test(line) ||
     /^ {0,3}(#{1,6})(?:[ \t]+|$)/u.test(line) ||
     /^ {0,3}>[ \t]?/u.test(line) ||
     (interruptingParagraph ? /^ {0,3}[-*+][ \t]+\S/u : /^ {0,3}[-*+][ \t]+/u).test(line) ||
@@ -435,7 +470,7 @@ function singleLineListChain(markdown: string): MarkdownBlockPart | null {
   let thematicCount = 0;
   while (thematicStart > 0) {
     const character = markdown[thematicStart - 1];
-    if (!/\s/u.test(character)) {
+    if (!/[ \t]/u.test(character)) {
       if (!thematicMarker && /[*_-]/u.test(character)) thematicMarker = character;
       if (!thematicMarker || character !== thematicMarker) break;
       thematicCount += 1;
@@ -466,9 +501,8 @@ function singleLineListChain(markdown: string): MarkdownBlockPart | null {
 
 function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): Generator<MarkdownBlockPart> {
   const normalizedMarkdown = markdown.replace(/\r\n?/gu, '\n');
-  const lines = normalizedMarkdown
-    .split('\n')
-    .map((line) => line.replace(/^[ \t]+/u, (indentation) => ' '.repeat(listPaddingWidth(indentation, 0))));
+  const rawLines = normalizedMarkdown.split('\n');
+  const lines = rawLines.map(expandLeadingIndentation);
   if (lines.length === 1) {
     const chain = singleLineListChain(normalizedMarkdown);
     if (chain) {
@@ -479,7 +513,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
 
   for (let index = 0; index < lines.length; ) {
     const line = lines[index];
-    const trimmedLine = line.trim();
+    const trimmedLine = line.replace(/^[ \t]+|[ \t]+$/gu, '');
 
     if (trimmedLine.length === 0) {
       index += 1;
@@ -488,26 +522,28 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
 
     if (isIndentedCode(line)) {
       const codeLines: string[] = [];
-      while (index < lines.length && (/^(?: {4}|\t)/u.test(lines[index]) || !lines[index].trim())) {
-        codeLines.push(lines[index].replace(/^(?: {4}|\t)/u, ''));
+      while (
+        index < lines.length &&
+        (/^(?: {4}|\t)/u.test(lines[index]) || !lines[index].replace(/^[ \t]+|[ \t]+$/gu, ''))
+      ) {
+        codeLines.push(stripIndentation(rawLines[index], 4));
         index += 1;
       }
-      while (codeLines.at(-1)?.trim() === '') codeLines.pop();
+      while (codeLines.at(-1)?.replace(/^[ \t]+|[ \t]+$/gu, '') === '') codeLines.pop();
       yield `<pre class="markdown-code-block"><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`;
       continue;
     }
 
     const fenceMatch = matchCodeFence(line);
     if (fenceMatch) {
-      const language = fenceMatch[2].trim();
-      const indentation = line.length - line.trimStart().length;
-      const codeIndent = new RegExp('^ {0,' + indentation + '}', 'u');
+      const language = fenceMatch[2].replace(/^[ \t]+|[ \t]+$/gu, '');
+      const indentation = line.length - line.replace(/^[ \t]+/u, '').length;
       const closingFence = closingCodeFence(fenceMatch[1]);
       const codeLines: string[] = [];
       index += 1;
 
       while (index < lines.length && !closingFence.test(lines[index])) {
-        codeLines.push(lines[index].replace(codeIndent, ''));
+        codeLines.push(stripIndentation(rawLines[index], indentation));
         index += 1;
       }
 
@@ -523,12 +559,12 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
 
     if (headingMatch) {
       const level = headingMatch[1].length;
-      yield `<h${level}>${renderInlineMarkdown(headingMatch[2].replace(/(?:^|[ \t]+)#+[ \t]*$/u, '').trim())}</h${level}>`;
+      yield `<h${level}>${renderInlineMarkdown(headingMatch[2].replace(/(?:^|[ \t]+)#+[ \t]*$/u, '').replace(/^[ \t]+|[ \t]+$/gu, ''))}</h${level}>`;
       index += 1;
       continue;
     }
 
-    if (/^([*_-])(?:\s*\1){2,}\s*$/u.test(trimmedLine)) {
+    if (/^([*_-])(?:[ \t]*\1){2,}[ \t]*$/u.test(trimmedLine)) {
       yield '<hr />';
       index += 1;
       continue;
@@ -540,7 +576,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
       let lazyParagraph = false;
       let quoteFence: RegExp | null = null;
       while (index < lines.length) {
-        const quoteLine = lines[index];
+        const quoteLine = expandQuoteMarkerTabs(lines[index]);
         if (/^ {0,3}>[ \t]?/u.test(quoteLine)) {
           quoteLines.push(quoteLine);
           const content = quoteLine.replace(/^ {0,3}>[ \t]?/u, '');
@@ -553,7 +589,9 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
             lazyParagraph = false;
           } else {
             lazyParagraph =
-              !isIndentedCode(content) && !isParagraphBoundary(content, true) && !/^(?:=+|-+)\s*$/u.test(content);
+              (lazyParagraph || !isIndentedCode(content)) &&
+              !isParagraphBoundary(content, lazyParagraph) &&
+              !/^(?:=+|-+)[ \t]*$/u.test(content);
           }
         } else if (lazyParagraph && !isParagraphBoundary(quoteLine, true)) {
           quoteLines.push('> ' + quoteLine);
@@ -603,7 +641,9 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
         const match = lines[index].match(itemPattern);
         if (!match) break;
         let itemContent = match[1] ?? '';
-        let contentIndent = itemContent ? match[0].length - itemContent.length : match[0].trimEnd().length + 1;
+        let contentIndent = itemContent
+          ? match[0].length - itemContent.length
+          : match[0].replace(/[ \t]+$/u, '').length + 1;
         const markerEnd = lines[index].match(/^ {0,3}(?:[-*+]|\d{1,9}[.)])/u)![0].length;
         const padding = lines[index].slice(markerEnd, contentIndent);
         const paddingWidth = listPaddingWidth(padding, markerEnd);
@@ -620,9 +660,9 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
         while (index < lines.length) {
           const continuation = lines[index];
           const indentation = continuation.match(/^ +/u)?.[0].length ?? 0;
-          if (!continuation.trim()) {
+          if (!continuation.replace(/^[ \t]+|[ \t]+$/gu, '')) {
             let next = index + 1;
-            while (next < lines.length && !lines[next].trim()) next += 1;
+            while (next < lines.length && !lines[next].replace(/^[ \t]+|[ \t]+$/gu, '')) next += 1;
             if (
               next === lines.length ||
               (!itemPattern.test(lines[next]) && (lines[next].match(/^ +/u)?.[0].length ?? 0) < contentIndent)
@@ -632,7 +672,7 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
             loose = true;
             lazyParagraph = false;
           } else if (indentation >= contentIndent) {
-            const content = continuation.slice(contentIndent);
+            const content = stripIndentation(rawLines[index], contentIndent);
             itemLines.push(content);
             if (closingItemFence) {
               if (closingItemFence.test(content)) closingItemFence = null;
@@ -641,14 +681,14 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
               const fence = matchCodeFence(content);
               closingItemFence = fence ? closingCodeFence(fence[1]) : null;
               lazyParagraph =
-                !isIndentedCode(content) &&
-                !isParagraphBoundary(content.trimStart(), lazyParagraph) &&
-                !/^(?:=+|-+)\s*$/u.test(content.trim());
+                (lazyParagraph || !isIndentedCode(content)) &&
+                !isParagraphBoundary(content.replace(/^[ \t]+/u, ''), lazyParagraph) &&
+                !/^(?:=+|-+)[ \t]*$/u.test(content.replace(/^[ \t]+|[ \t]+$/gu, ''));
             }
-          } else if (itemPattern.test(continuation) || (ordered && /^ {0,3}\d{1,9}[.)]\s+/u.test(continuation))) {
+          } else if (itemPattern.test(continuation) || (ordered && /^ {0,3}\d{1,9}[.)][ \t]+/u.test(continuation))) {
             break;
-          } else if (lazyParagraph && !isParagraphBoundary(continuation.trimStart(), true)) {
-            itemLines.push(continuation.trimStart());
+          } else if (lazyParagraph && !isParagraphBoundary(continuation.replace(/^[ \t]+/u, ''), true)) {
+            itemLines.push(continuation.replace(/^[ \t]+/u, ''));
           } else {
             break;
           }
@@ -664,22 +704,22 @@ function* renderMarkdownBlockParts(markdown: string, tightParagraphs = false): G
       continue;
     }
 
-    const paragraphLines = [line.trimStart()];
+    const paragraphLines = [line.replace(/^[ \t]+/u, '')];
     index += 1;
 
     while (
       index < lines.length &&
       !isParagraphBoundary(lines[index], true) &&
-      !/^ {0,3}(?:=+|-+)\s*$/u.test(lines[index])
+      !/^ {0,3}(?:=+|-+)[ \t]*$/u.test(lines[index])
     ) {
-      paragraphLines.push(lines[index].trimStart());
+      paragraphLines.push(lines[index].replace(/^[ \t]+/u, ''));
       index += 1;
     }
 
-    const underline = lines[index]?.match(/^ {0,3}(=+|-+)\s*$/u);
+    const underline = lines[index]?.match(/^ {0,3}(=+|-+)[ \t]*$/u);
     if (underline) {
       const level = underline[1][0] === '=' ? 1 : 2;
-      yield `<h${level}>${renderInlineMarkdown(paragraphLines.join('\n').trim())}</h${level}>`;
+      yield `<h${level}>${renderInlineMarkdown(paragraphLines.join('\n').replace(/^[ \t]+|[ \t]+$/gu, ''))}</h${level}>`;
       index += 1;
     } else {
       const paragraph = renderInlineMarkdown(paragraphLines.join('\n'));

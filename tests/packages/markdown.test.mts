@@ -679,3 +679,45 @@ test('inner explicit links leave enclosing link syntax literal', () => {
     '<p><a href="https://outer" target="_blank" rel="noreferrer">outer [literal]</a></p>',
   );
 });
+
+test('fenced code preserves literal leading tabs', () => {
+  assert.equal(renderMarkdownPreview('~~~\n\tfoo\n~~~'), '<pre class="markdown-code-block"><code>\tfoo</code></pre>');
+});
+
+test('angle destinations allow spaces but reject line endings and unescaped angles', () => {
+  assert.match(renderMarkdownPreview('[x](<https://example.com/a b>)'), /<a /);
+  assert.doesNotMatch(renderMarkdownPreview('[x](<https://example.com/a\nb>)'), /<a /);
+  assert.doesNotMatch(renderMarkdownPreview('[x](<https://example.com/a<b>)'), /<a /);
+});
+
+test('indented paragraph continuations preserve quote and list lazy state', () => {
+  assert.equal(
+    renderMarkdownPreview('> first\n>     second\nthird'),
+    '<blockquote><p>first second third</p></blockquote>',
+  );
+  assert.equal(renderMarkdownPreview('- first\n      second\nthird'), '<ul><li>first second third</li></ul>');
+});
+
+test('non-ASCII spaces remain paragraph content', () => {
+  for (const space of ['\u00a0', '\u2003']) {
+    assert.equal(renderMarkdownPreview(`hello\n${space}\nworld`), `<p>hello ${space} world</p>`);
+    assert.equal(renderMarkdownPreview(`${space}hello`), `<p>${space}hello</p>`);
+  }
+});
+
+test('quote marker tabs retain unconsumed indentation columns', () => {
+  assert.equal(
+    renderMarkdownPreview('>\t  code'),
+    '<blockquote><pre class="markdown-code-block"><code>code</code></pre></blockquote>',
+  );
+});
+
+test('link titles reject unescaped interior matching delimiters', () => {
+  for (const title of ['"a"b"', "'a'b'", '(a)b)'])
+    assert.doesNotMatch(renderMarkdownPreview(`[x](https://example.com ${title})`), /<a /);
+  assert.match(renderMarkdownPreview('[x](https://example.com "a\\"b")'), /<a /);
+});
+
+test('nested list tabs use the original line column', () => {
+  assert.equal(renderMarkdownPreview('- -\t  x'), '<ul><li><ul><li>x</li></ul></li></ul>');
+});
