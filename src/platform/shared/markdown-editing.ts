@@ -21,14 +21,14 @@ export function wrapMarkdownText(
 
 export function insertCodeFence(text: string, start: number, end: number) {
   const rawSelection = text.slice(start, end);
-  const leadingNewline = rawSelection.startsWith('\n') ? 1 : 0;
-  const trailingNewline = rawSelection.endsWith('\n') ? 1 : 0;
+  const leadingNewline = rawSelection.match(/^(?:\r\n|\r|\n)/u)?.[0].length ?? 0;
+  const trailingNewline = rawSelection.slice(leadingNewline).match(/(?:\r\n|\r|\n)$/u)?.[0].length ?? 0;
   const selected = rawSelection.slice(leadingNewline, rawSelection.length - trailingNewline) || 'code block';
   let longestRun = 0;
   for (const match of selected.matchAll(/`+/gu)) longestRun = Math.max(longestRun, match[0].length);
   const fence = '`'.repeat(Math.max(3, longestRun + 1));
-  const prefix = `${start > 0 && text[start - 1] !== '\n' ? '\n' : ''}${fence}\n`;
-  const suffix = `\n${fence}${end < text.length && text[end] !== '\n' ? '\n' : ''}`;
+  const prefix = `${start > 0 && text[start - 1] !== '\n' && text[start - 1] !== '\r' ? '\n' : ''}${fence}\n`;
+  const suffix = `\n${fence}${end < text.length && text[end] !== '\n' && text[end] !== '\r' ? '\n' : ''}`;
   return {
     content: text.slice(0, start) + prefix + selected + suffix + text.slice(end),
     selectionStart: start + prefix.length,

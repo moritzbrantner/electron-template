@@ -572,7 +572,7 @@ test('nested blockquotes do not pull outer lazy paragraphs into inner quotes', (
 
 test('code toolbar reuses selected boundary newlines', async () => {
   const { insertCodeFence } = await import('../../src/platform/shared/markdown-editing.ts');
-  for (const source of ['code\n', '\ncode', '\ncode\n']) {
+  for (const source of ['code\n', '\ncode', '\ncode\n', '\r\ncode\r\n', '\rcode\r', '\r\ncode']) {
     const result = insertCodeFence(source, 0, source.length);
     assert.equal(result.content, '```\ncode\n```');
     assert.equal(result.content.slice(result.selectionStart, result.selectionEnd), 'code');
@@ -782,4 +782,17 @@ test('reference definitions reject unbalanced bare destinations', () => {
     /href="https:\/\/example.com\/a\(b"/,
   );
   assert.doesNotMatch(renderMarkdownPreview('[known][missing]\n\n[known]: https://example.com'), /<a /);
+});
+
+test('backticks inside inline link destinations are literal', () => {
+  assert.equal(
+    renderMarkdownPreview('[x](https://example.com/a`)`b)'),
+    '<p><a href="https://example.com/a`" target="_blank" rel="noreferrer">x</a>`b)</p>',
+  );
+  assert.equal(
+    renderMarkdownPreview('`a` [x](https://e.com/u`v) `c`'),
+    '<p><code>a</code> <a href="https://e.com/u`v" target="_blank" rel="noreferrer">x</a> <code>c</code></p>',
+  );
+  assert.equal(renderMarkdownPreview('[x](a `c)` d)'), '<p>[x](a <code>c)</code> d)</p>');
+  assert.equal(renderMarkdownPreview('[not a `link](/foo`)'), '<p>[not a <code>link](/foo</code>)</p>');
 });

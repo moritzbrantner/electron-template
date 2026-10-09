@@ -209,13 +209,20 @@ function delimiterPairs(text: string, codeEnds: Map<number, number>) {
   const pairs = new Map<number, number>();
   const brackets: number[] = [];
   const parentheses: number[] = [];
+  // Open inline-link destinations; backticks inside a destination are literal.
+  const destinations: number[] = [];
+  let closedLabel = -1;
+  let lastWhitespace = -1;
   let nextAngleEnd = unescapedAngleEnd(text, 0);
   for (let index = 0; index < text.length; index += 1) {
     if (text[index] === '\\') {
       index += 1;
       continue;
     }
-    const codeEnd = codeEnds.get(index);
+    if (/\s/u.test(text[index])) lastWhitespace = index;
+    const destination = destinations.at(-1);
+    const inDestination = destination !== undefined && lastWhitespace < destination;
+    const codeEnd = inDestination ? undefined : codeEnds.get(index);
     if (codeEnd !== undefined) {
       let runEnd = index + 1;
       while (text[runEnd] === '`') runEnd += 1;
@@ -246,10 +253,17 @@ function delimiterPairs(text: string, codeEnds: Map<number, number>) {
       }
     }
     if (text[index] === '[') brackets.push(index);
-    if (text[index] === '(') parentheses.push(index);
+    if (text[index] === '(') {
+      parentheses.push(index);
+      if (closedLabel === index - 1) destinations.push(index);
+    }
     const stack = text[index] === ']' ? brackets : text[index] === ')' ? parentheses : null;
     const start = stack?.pop();
-    if (start !== undefined) pairs.set(start, index);
+    if (start !== undefined) {
+      pairs.set(start, index);
+      if (stack === brackets) closedLabel = index;
+      else if (start === destinations.at(-1)) destinations.pop();
+    }
   }
   return pairs;
 }
