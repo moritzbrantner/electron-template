@@ -36,7 +36,7 @@ esac
 if ! command -v rustup >/dev/null 2>&1; then
   curl --proto '=https' --tlsv1.2 --fail --silent --show-error https://sh.rustup.rs |
     sh -s -- -y --profile minimal --default-toolchain none
-  export PATH="$HOME/.cargo/bin:$PATH"
+  export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 fi
 rustup toolchain install "$rust_toolchain" --profile minimal --target wasm32-unknown-unknown
 export RUSTUP_TOOLCHAIN="$rust_toolchain"
