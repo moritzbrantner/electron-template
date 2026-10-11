@@ -1,4 +1,6 @@
 import './index.css';
+import { insertCodeFence, insertMarkdownLink as insertMarkdownLinkText, prefixMarkdownLines, wrapMarkdownText } from './platform/shared/markdown-editing';
+import { renderMarkdownPreview } from './platform/shared/markdown-preview';
 
 import type { CommandState } from '@moritzbrantner/electron-commands/renderer';
 import type { DocumentState } from '@moritzbrantner/electron-documents/renderer';
@@ -41,6 +43,93 @@ const appState = {
 };
 let mapsPlaygroundModule: typeof import('./maps-playground') | null = null;
 let mapsPlaygroundRenderVersion = 0;
+
+interface DocumentEditorSnapshot {
+  hadFocus: boolean;
+  scrollTop: number;
+  selectionEnd: number | null;
+  selectionStart: number | null;
+}
+
+function countWords(text: string) {
+  const trimmed = text.trim();
+
+  if (trimmed.length === 0) {
+    return 0;
+  }
+
+  return trimmed.split(/\s+/).length;
+}
+
+function updateDocumentEditorValue(
+  editor: HTMLTextAreaElement,
+  nextValue: string,
+  selectionStart: number,
+  selectionEnd: number,
+) {
+  editor.value = nextValue;
+  editor.focus({ preventScroll: true });
+  editor.setSelectionRange(selectionStart, selectionEnd);
+  void window.desktop.documents.updateDraft(nextValue);
+}
+
+function wrapMarkdownSelection(
+  editor: HTMLTextAreaElement,
+  prefix: string,
+  suffix: string,
+  fallbackText: string,
+) {
+  const inserted = wrapMarkdownText(editor.value, editor.selectionStart, editor.selectionEnd, prefix, suffix, fallbackText);
+  updateDocumentEditorValue(editor, inserted.content, inserted.selectionStart, inserted.selectionEnd);
+}
+
+function prefixMarkdownSelection(editor: HTMLTextAreaElement, prefix: string, fallbackText: string) {
+  const inserted = prefixMarkdownLines(editor.value, editor.selectionStart, editor.selectionEnd, prefix, fallbackText);
+  updateDocumentEditorValue(editor, inserted.content, inserted.selectionStart, inserted.selectionEnd);
+}
+
+function insertMarkdownLink(editor: HTMLTextAreaElement) {
+  const inserted = insertMarkdownLinkText(editor.value, editor.selectionStart, editor.selectionEnd);
+  updateDocumentEditorValue(editor, inserted.content, inserted.selectionStart, inserted.selectionEnd);
+}
+
+function captureDocumentEditorSnapshot(): DocumentEditorSnapshot | null {
+  const editor = document.querySelector<HTMLTextAreaElement>('textarea.document-editor');
+
+  if (!editor) {
+    return null;
+  }
+
+  return {
+    hadFocus: document.activeElement === editor,
+    scrollTop: editor.scrollTop,
+    selectionEnd: editor.selectionEnd,
+    selectionStart: editor.selectionStart,
+  };
+}
+
+function restoreDocumentEditorSnapshot(snapshot: DocumentEditorSnapshot | null) {
+  if (!snapshot?.hadFocus) {
+    return;
+  }
+
+  const editor = document.querySelector<HTMLTextAreaElement>('textarea.document-editor');
+
+  if (!editor) {
+    return;
+  }
+
+  editor.focus({ preventScroll: true });
+
+  if (
+    typeof snapshot.selectionStart === 'number' &&
+    typeof snapshot.selectionEnd === 'number'
+  ) {
+    editor.setSelectionRange(snapshot.selectionStart, snapshot.selectionEnd);
+  }
+
+  editor.scrollTop = snapshot.scrollTop;
+}
 
 // @moritzbrantner/ui 1.x no longer exports the legacy 0.1 label helper; keep its output stable.
 function createSharedButtonLabel({ label }: { label: string }): string {
@@ -237,7 +326,7 @@ function createHomeScreen() {
 
   [
     'Preferences persist through a typed preload-safe store.',
-    'Documents support save, save as, reopen recent, and dirty state.',
+    'Documents support markdown editing, save/open flows, recent files, and dirty state.',
     'Uploads support queueing, retry, cancelation, persistence, and restart recovery.',
     'Commands flow through a reusable registry with menu-state refresh hooks.',
   ].forEach((text) => {
@@ -551,9 +640,9 @@ function createMetaLine(text: string) {
 
 function createDocumentsScreen() {
   const screen = createScreenFrame(
-    'Save and load',
+    'Write in markdown',
     'Documents',
-    'This route is backed by reusable document workflow packages and session-scoped renderer state.',
+    'Create markdown notes with a live preview, reusable save/open commands, and recent-file history.',
   );
 
   const toolbar = document.createElement('div');
@@ -577,6 +666,10 @@ function createDocumentsScreen() {
     toolbar.append(button);
   });
 
+  const content = appState.documents.content;
+  const wordCount = countWords(content);
+  const characterCount = content.length;
+
   const summary = document.createElement('div');
   summary.className = 'document-summary';
 
@@ -591,11 +684,37 @@ function createDocumentsScreen() {
   nameLine.textContent = appState.documents.displayName;
   meta.append(
     nameLine,
-    createMetaLine(appState.documents.filePath ?? 'No file path yet'),
+    createMetaLine(appState.documents.filePath ?? 'Not saved yet'),
     createMetaLine(appState.documents.statusMessage),
+    createMetaLine(
+      appState.documents.lastSavedAt
+        ? `Last saved ${new Date(appState.documents.lastSavedAt).toLocaleString()}`
+        : 'No saved version yet',
+    ),
   );
 
-  summary.append(statusBadge, meta);
+  const stats = document.createElement('div');
+  stats.className = 'document-stats';
+
+  [
+    { label: 'Words', value: wordCount.toLocaleString() },
+    { label: 'Characters', value: characterCount.toLocaleString() },
+    { label: 'Lines', value: content.length === 0 ? '0' : content.split(/\r\n|\r|\n/u).length.toLocaleString() },
+  ].forEach((item) => {
+    const stat = document.createElement('div');
+    stat.className = 'document-stat';
+
+    const value = document.createElement('strong');
+    value.textContent = item.value;
+
+    const label = document.createElement('span');
+    label.textContent = item.label;
+
+    stat.append(value, label);
+    stats.append(stat);
+  });
+
+  summary.append(statusBadge, meta, stats);
 
   const layout = document.createElement('div');
   layout.className = 'document-layout';
@@ -603,19 +722,102 @@ function createDocumentsScreen() {
   const editorCard = document.createElement('article');
   editorCard.className = 'overview-card';
 
+  const editorHeader = document.createElement('div');
+  editorHeader.className = 'document-card-header';
+
   const editorLabel = document.createElement('label');
   editorLabel.className = 'document-editor-label';
-  editorLabel.textContent = 'Current document';
+  editorLabel.textContent = 'Markdown editor';
+  editorLabel.htmlFor = 'document-editor';
+
+  const editorHint = document.createElement('p');
+  editorHint.className = 'document-helper-text';
+  editorHint.textContent = 'Use the formatting buttons or write markdown directly. Save to a real `.md` file.';
+
+  editorHeader.append(editorLabel, editorHint);
+
+  const formattingTools = document.createElement('div');
+  formattingTools.className = 'markdown-tools';
 
   const editor = document.createElement('textarea');
+  editor.id = 'document-editor';
   editor.className = 'document-editor';
-  editor.value = appState.documents.content;
-  editor.placeholder = 'Write something, then save it to a .desktop.json file.';
+  editor.value = content;
+  editor.placeholder = '# Untitled document\n\nStart writing your markdown here.';
   editor.addEventListener('input', () => {
     void window.desktop.documents.updateDraft(editor.value);
   });
 
-  editorCard.append(editorLabel, editor);
+  [
+    {
+      label: 'H1',
+      run: () => {
+        prefixMarkdownSelection(editor, '# ', 'Heading');
+      },
+    },
+    {
+      label: 'Bold',
+      run: () => {
+        wrapMarkdownSelection(editor, '**', '**', 'bold text');
+      },
+    },
+    {
+      label: 'Italic',
+      run: () => {
+        wrapMarkdownSelection(editor, '*', '*', 'emphasis');
+      },
+    },
+    {
+      label: 'List',
+      run: () => {
+        prefixMarkdownSelection(editor, '- ', 'List item');
+      },
+    },
+    {
+      label: 'Quote',
+      run: () => {
+        prefixMarkdownSelection(editor, '> ', 'Quoted text');
+      },
+    },
+    {
+      label: 'Code',
+      run: () => {
+        const inserted = insertCodeFence(editor.value, editor.selectionStart, editor.selectionEnd);
+        updateDocumentEditorValue(editor, inserted.content, inserted.selectionStart, inserted.selectionEnd);
+      },
+    },
+    {
+      label: 'Link',
+      run: () => {
+        insertMarkdownLink(editor);
+      },
+    },
+  ].forEach((tool) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'markdown-tool';
+    button.textContent = tool.label;
+    button.addEventListener('click', tool.run);
+    formattingTools.append(button);
+  });
+
+  editorCard.append(editorHeader, formattingTools, editor);
+
+  const sidebar = document.createElement('div');
+  sidebar.className = 'document-sidebar';
+
+  const previewCard = document.createElement('article');
+  previewCard.className = 'overview-card';
+
+  const previewTitle = document.createElement('h2');
+  previewTitle.className = 'document-section-title';
+  previewTitle.textContent = 'Preview';
+
+  const preview = document.createElement('div');
+  preview.className = 'document-preview';
+  preview.innerHTML = renderMarkdownPreview(content);
+
+  previewCard.append(previewTitle, preview);
 
   const recentCard = document.createElement('article');
   recentCard.className = 'overview-card';
@@ -652,7 +854,8 @@ function createDocumentsScreen() {
   }
 
   recentCard.append(recentTitle, recentList);
-  layout.append(editorCard, recentCard);
+  sidebar.append(previewCard, recentCard);
+  layout.append(editorCard, sidebar);
   screen.append(toolbar, summary, layout);
 
   return screen;
@@ -993,6 +1196,7 @@ function renderApp() {
   }
 
   const route = getCurrentRoute();
+  const documentEditorSnapshot = route === 'documents' ? captureDocumentEditorSnapshot() : null;
   unmountMapsScreen();
   app.innerHTML = '';
   app.append(createNavbar(route, appState.preferences.hotkeys.navigation));
@@ -1009,6 +1213,7 @@ function renderApp() {
 
   if (route === 'documents') {
     app.append(createDocumentsScreen());
+    restoreDocumentEditorSnapshot(documentEditorSnapshot);
     return;
   }
 
