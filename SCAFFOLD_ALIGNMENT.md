@@ -19,7 +19,7 @@ Shared:
 - scaffold contract from `monorepo`
 - pinned reusable workflow references
 - structural migrations from `@moritzbrantner/platform-upgrader`
-- released packages from `platform-packages`
+- owner packages (`@moritzbrantner/ui`, `@moritzbrantner/maps`) pinned as git sources of their standalone repositories
 
 ## Update path
 

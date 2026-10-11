@@ -12,12 +12,16 @@ export default defineConfig({
       input: path.resolve(__dirname, 'index.html'),
     },
   },
-  server: {
-    fs: {
-      allow: [path.resolve(__dirname, '../platform-packages/packages/maps')],
-    },
-  },
   resolve: {
-    alias: packageAliases,
+    alias: {
+      ...packageAliases,
+      // @moritzbrantner/maps imports named exports from polygon-clipping, whose ESM build only has a
+      // default export. Rollup rejects that, so resolve the CommonJS build, which interop handles.
+      // Remove once moritzbrantner/maps#183 is fixed.
+      'polygon-clipping': path.resolve(
+        __dirname,
+        'node_modules/polygon-clipping/dist/polygon-clipping.cjs.js',
+      ),
+    },
   },
 });
