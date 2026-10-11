@@ -21,6 +21,10 @@ test('desktop main process composes the reusable platform layer', () => {
   assert.match(mainSource, /createDesktopPlatform/);
   assert.match(mainSource, /platform\.windowState\.getState\('main'\)/);
   assert.match(mainSource, /platform\.documents\.confirmBeforeClose/);
+  assert.match(
+    mainSource,
+    /mainWindow\.webContents\.setWindowOpenHandler\(\s*createExternalLinkHandler\(\(url\) => shell\.openExternal\(url\)\)\s*\)/,
+  );
   assert.match(platformSource, /createJsonStore/);
   assert.match(platformSource, /createPreferencesService/);
   assert.match(platformSource, /createDocumentsService/);

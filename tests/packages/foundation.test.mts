@@ -397,6 +397,14 @@ test('documents service supports save, save as, open recent, dirty state, and ca
   await service.openRecent(documentFilePath, {} as never);
   assert.equal((await service.getState()).content, 'hello again');
 
+  for (const exactContent of ['# Title\r\n\r\nbody\r\n', 'trailing\n\n', 'mixed\r\nendings\nno newline']) {
+    await service.updateDraft(exactContent);
+    await service.save({} as never);
+    assert.equal(await readFile(documentFilePath, 'utf8'), exactContent);
+    await service.openRecent(documentFilePath, {} as never);
+    assert.equal((await service.getState()).content, exactContent);
+  }
+
   await writeFile(recentFilePath, 'from recent', 'utf8');
   const previousSaveTime = new Date('2020-01-02T03:04:05.000Z');
   await utimes(recentFilePath, previousSaveTime, previousSaveTime);
@@ -413,6 +421,10 @@ test('documents service supports save, save as, open recent, dirty state, and ca
   await service.updateDraft('# Edited legacy');
   await service.save({} as never);
   assert.equal(JSON.parse(await readFile(legacyPath, 'utf8')).content, '# Edited legacy');
+  assert.equal(
+    await readFile(legacyPath, 'utf8'),
+    `${JSON.stringify({ content: '# Edited legacy', version: 1 }, null, 2)}\n`,
+  );
   await service.openRecent(legacyPath, {} as never);
   assert.equal((await service.getState()).content, '# Edited legacy');
   }
