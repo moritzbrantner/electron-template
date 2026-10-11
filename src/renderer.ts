@@ -2,8 +2,6 @@ import './index.css';
 import { insertCodeFence, insertMarkdownLink as insertMarkdownLinkText, prefixMarkdownLines, wrapMarkdownText } from './platform/shared/markdown-editing';
 import { renderMarkdownPreview } from './platform/shared/markdown-preview';
 
-import { createSharedButtonLabel } from '@moritzbrantner/ui';
-
 import type { CommandState } from '@moritzbrantner/electron-commands/renderer';
 import type { DocumentState } from '@moritzbrantner/electron-documents/renderer';
 
@@ -131,6 +129,11 @@ function restoreDocumentEditorSnapshot(snapshot: DocumentEditorSnapshot | null) 
   }
 
   editor.scrollTop = snapshot.scrollTop;
+}
+
+// @moritzbrantner/ui 1.x no longer exports the legacy 0.1 label helper; keep its output stable.
+function createSharedButtonLabel({ label }: { label: string }): string {
+  return `shared:${label}`;
 }
 
 function applyTheme(preferences: DesktopPreferences) {

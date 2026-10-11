@@ -16,11 +16,10 @@ jobs:
       packages: read
     uses: moritzbrantner/reusable-workflows/.github/workflows/validate-repo.yml@scaffold-v2-initial
     with:
-      install_command: bun install --frozen-lockfile
+      install_command: bash scripts/with-maps-build-tools.sh bun install --frozen-lockfile
       lint_command: bun run lint
       test_command: bun run test:unit && bun run test:integration && bun run test:package
       build_command: bun run build
       e2e_command: bun run test:e2e
       install_playwright: true
-    secrets:
-      node_auth_token: ${{ secrets.GH_PACKAGES_TOKEN }}
+      install_xvfb: true
