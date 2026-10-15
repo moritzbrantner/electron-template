@@ -1,5 +1,2 @@
 [install]
 linker = "hoisted"
-
-[install.scopes]
-"@moritzbrantner" = { token = "$NODE_AUTH_TOKEN", url = "https://npm.pkg.github.com" }

@@ -126,18 +126,19 @@ test('saves and reopens a document through the command-backed document flow', as
   await page.getByRole('link', { name: 'Documents' }).click();
 
   const editor = page.locator('textarea.document-editor');
-  await editor.fill('Playwright save flow');
+  await editor.fill('# Playwright save flow\n\nThis document came from Playwright.');
+  await expect(page.locator('.document-preview h1')).toHaveText('Playwright save flow');
 
   await runCommand(page, 'document.save');
-  await expect(page.getByText(/Saved e2e-document\.desktop\.json/)).toBeVisible();
+  await expect(page.getByText(/Saved e2e-document\.md/)).toBeVisible();
 
   await runCommand(page, 'document.new');
   await expect(editor).toHaveValue(
-    'Write here. Save with CmdOrCtrl+S and reopen from the recent files list.',
+    '# Untitled document\n\nStart writing in Markdown.\n\n- Add headings, lists, and links\n- Save with CmdOrCtrl+S\n- Reopen from the recent files list',
   );
 
-  await page.getByRole('button', { name: /e2e-document\.desktop\.json/ }).click();
-  await expect(editor).toHaveValue('Playwright save flow');
+  await page.getByRole('button', { name: /e2e-document\.md/ }).click();
+  await expect(editor).toHaveValue('# Playwright save flow\n\nThis document came from Playwright.');
 });
 
 test('queues an upload and restores it after relaunch', async ({ app, page, userDataDir }) => {

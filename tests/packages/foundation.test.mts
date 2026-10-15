@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'bun:test';
@@ -14,6 +14,7 @@ import {
   createDesktopPreferencesStore,
   loadDesktopPreferencesForLaunch,
 } from '../../src/platform/main/desktop-preferences-store.ts';
+import { desktopDocumentSerializer } from '../../src/platform/shared/document-serializer.ts';
 import { isDesktopPreferences } from '../../src/platform/shared/preferences.ts';
 
 test('json store loads defaults, validates, migrates, and writes atomically', async () => {
@@ -343,8 +344,8 @@ test('commands service rejects duplicates and disabled commands', async () => {
 
 test('documents service supports save, save as, open recent, dirty state, and cancelation', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'desktop-documents-'));
-  const documentFilePath = path.join(directory, 'note.desktop.json');
-  const recentFilePath = path.join(directory, 'second.desktop.json');
+  const documentFilePath = path.join(directory, 'note.md');
+  const recentFilePath = path.join(directory, 'second.md');
   const recentStore = createJsonStore({
     defaultValue: {
       items: [],
@@ -377,17 +378,7 @@ test('documents service supports save, save as, open recent, dirty state, and ca
     dialogAdapter,
     getBroadcastTargets: () => [],
     recentStore,
-    serializer: {
-      deserialize(raw: string) {
-        const parsed = JSON.parse(raw) as { content: string };
-        return { content: parsed.content };
-      },
-      extension: 'desktop.json',
-      name: 'Desktop',
-      serialize(value) {
-        return JSON.stringify({ content: value.content });
-      },
-    },
+    serializer: desktopDocumentSerializer,
   });
 
   await service.updateDraft('hello world');
@@ -402,12 +393,42 @@ test('documents service supports save, save as, open recent, dirty state, and ca
 
   await service.updateDraft('hello again');
   await service.save({} as never);
-  assert.equal(JSON.parse(await readFile(documentFilePath, 'utf8')).content, 'hello again');
+  assert.equal(await readFile(documentFilePath, 'utf8'), 'hello again');
+  await service.openRecent(documentFilePath, {} as never);
+  assert.equal((await service.getState()).content, 'hello again');
 
-  await writeFile(recentFilePath, JSON.stringify({ content: 'from recent' }), 'utf8');
+  for (const exactContent of ['# Title\r\n\r\nbody\r\n', 'trailing\n\n', 'mixed\r\nendings\nno newline']) {
+    await service.updateDraft(exactContent);
+    await service.save({} as never);
+    assert.equal(await readFile(documentFilePath, 'utf8'), exactContent);
+    await service.openRecent(documentFilePath, {} as never);
+    assert.equal((await service.getState()).content, exactContent);
+  }
+
+  await writeFile(recentFilePath, 'from recent', 'utf8');
+  const previousSaveTime = new Date('2020-01-02T03:04:05.000Z');
+  await utimes(recentFilePath, previousSaveTime, previousSaveTime);
   await service.openRecent(recentFilePath, {} as never);
   assert.equal((await service.getState()).content, 'from recent');
+  assert.equal((await service.getState()).lastSavedAt, previousSaveTime.toISOString());
   assert.equal((await service.listRecent()).length, 2);
+
+  for (const suffix of ['desktop.json', 'json']) {
+  const legacyPath = path.join(directory, `legacy.${suffix}`);
+  await writeFile(legacyPath, JSON.stringify({ content: '# Legacy', version: 1 }), 'utf8');
+  await service.openRecent(legacyPath, {} as never);
+  assert.equal((await service.getState()).content, '# Legacy');
+  await service.updateDraft('# Edited legacy');
+  await service.save({} as never);
+  assert.equal(JSON.parse(await readFile(legacyPath, 'utf8')).content, '# Edited legacy');
+  assert.equal(
+    await readFile(legacyPath, 'utf8'),
+    `${JSON.stringify({ content: '# Edited legacy', version: 1 }, null, 2)}\n`,
+  );
+  await service.openRecent(legacyPath, {} as never);
+  assert.equal((await service.getState()).content, '# Edited legacy');
+  }
+
 
   const cancelService = createDocumentsService({
     defaultContent: 'start',
@@ -426,13 +447,12 @@ test('documents service supports save, save as, open recent, dirty state, and ca
     recentStore,
     serializer: {
       deserialize(raw: string) {
-        const parsed = JSON.parse(raw) as { content: string };
-        return { content: parsed.content };
+        return { content: raw };
       },
-      extension: 'desktop.json',
-      name: 'Desktop',
+      extension: 'md',
+      name: 'Markdown',
       serialize(value) {
-        return JSON.stringify({ content: value.content });
+        return value.content;
       },
     },
   });
@@ -448,13 +468,12 @@ test('documents service supports save, save as, open recent, dirty state, and ca
     recentStore,
     serializer: {
       deserialize(raw: string) {
-        const parsed = JSON.parse(raw) as { content: string };
-        return { content: parsed.content };
+        return { content: raw };
       },
-      extension: 'desktop.json',
-      name: 'Desktop',
+      extension: 'md',
+      name: 'Markdown',
       serialize(value) {
-        return JSON.stringify({ content: value.content });
+        return value.content;
       },
     },
   });

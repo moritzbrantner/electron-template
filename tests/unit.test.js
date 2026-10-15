@@ -19,6 +19,16 @@ test('desktop renderer uses the preload-backed desktop platform APIs', () => {
   assert.match(source, /Reset navigation hotkeys/);
   assert.match(source, /Each page shortcut must be unique\./);
   assert.match(source, /Built-in document shortcuts stay global/);
+  assert.match(source, /Markdown editor/);
+  assert.match(source, /renderMarkdownPreview/);
+  assert.match(source, /label: 'H1',\s*run: \(\) => \{\s*prefixMarkdownSelection\(editor, '# ', 'Heading'\)/);
+  assert.match(source, /label: 'Bold',\s*run: \(\) => \{\s*wrapMarkdownSelection\(editor, '\*\*', '\*\*', /);
+  assert.match(source, /label: 'Italic',\s*run: \(\) => \{\s*wrapMarkdownSelection\(editor, '\*', '\*', /);
+  assert.match(source, /label: 'List',\s*run: \(\) => \{\s*prefixMarkdownSelection\(editor, '- ', /);
+  assert.match(source, /label: 'Quote',\s*run: \(\) => \{\s*prefixMarkdownSelection\(editor, '> ', /);
+  assert.match(source, /label: 'Code',\s*run: \(\) => \{\s*const inserted = insertCodeFence\(/);
+  assert.match(source, /label: 'Link',\s*run: \(\) => \{\s*insertMarkdownLink\(editor\)/);
+  assert.match(source, /preview\.innerHTML = renderMarkdownPreview\(content\)/);
   assert.match(source, /hotkey-kbd/);
   assert.match(source, /route === 'documents'/);
   assert.match(source, /route === 'uploads'/);

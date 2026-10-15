@@ -54,12 +54,6 @@
       "@moritzbrantner/electron-preferences/shared": [
         "packages/electron-preferences/src/shared.ts"
       ],
-      "@moritzbrantner/maps": [
-        "../platform-packages/packages/maps/src/index.ts"
-      ],
-      "@moritzbrantner/maps/styles.css": [
-        "../platform-packages/packages/maps/styles.css"
-      ],
       "@moritzbrantner/electron-window-state/main": [
         "packages/electron-window-state/src/main.ts"
       ],

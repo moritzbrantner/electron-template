@@ -1,9 +1,10 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
 import { loadDesktopPreferencesForLaunch } from './platform/main/desktop-preferences-store';
 import { createDesktopPlatform } from './platform/main/create-desktop-platform';
+import { createExternalLinkHandler } from './platform/main/external-links';
 
 if (process.env.PLAYWRIGHT_E2E_USER_DATA_DIR) {
   app.setPath('userData', process.env.PLAYWRIGHT_E2E_USER_DATA_DIR);
@@ -57,6 +58,8 @@ async function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
+
+  mainWindow.webContents.setWindowOpenHandler(createExternalLinkHandler((url) => shell.openExternal(url)));
 
   platform.windowState.track('main', mainWindow);
   platform.commands.attachToWindow(mainWindow);

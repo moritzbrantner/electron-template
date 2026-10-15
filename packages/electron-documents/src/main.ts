@@ -27,7 +27,7 @@ export interface DocumentSerializer {
   deserialize(raw: string, filePath: string): LoadedDocument;
   extension: string;
   name: string;
-  serialize(value: LoadedDocument): string;
+  serialize(value: LoadedDocument, filePath?: string): string;
 }
 
 export interface DocumentDialogAdapter {
@@ -153,7 +153,7 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
 
   async function persistToPath(filePathValue: string, browserWindow: BrowserWindow | null) {
     const state = getInternalState(browserWindow);
-    const serialized = options.serializer.serialize({ content: state.content });
+    const serialized = options.serializer.serialize({ content: state.content }, filePathValue);
 
     await fs.mkdir(path.dirname(filePathValue), { recursive: true });
     await fs.writeFile(filePathValue, serialized, 'utf8');
@@ -200,11 +200,12 @@ export function createDocumentsService(options: DocumentsServiceOptions) {
   async function loadFile(filePathValue: string, browserWindow: BrowserWindow | null) {
     const raw = await fs.readFile(filePathValue, 'utf8');
     const loaded = options.serializer.deserialize(raw, filePathValue);
+    const metadata = await fs.stat(filePathValue);
 
     setInternalState(browserWindow, {
       content: loaded.content,
       filePath: filePathValue,
-      lastSavedAt: new Date().toISOString(),
+      lastSavedAt: metadata.mtime.toISOString(),
       lastSavedContent: loaded.content,
       statusMessage: `Opened ${path.basename(filePathValue)}`,
     });
