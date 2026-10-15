@@ -38,6 +38,8 @@ The standalone repo contract lives in [app.manifest.ts](/home/moenarch/moritzbra
 See [docs/architecture.md](/home/moenarch/moritzbrantner/electron-template/docs/architecture.md:1) for the package boundary rules.
 See [SCAFFOLD_ALIGNMENT.md](./SCAFFOLD_ALIGNMENT.md) for the scaffold-family alignment contract.
 
+Vite configuration uses native ESM `.mts` files. Main and preload retain CommonJS output with the Node bundling platform, so Node module URLs and Electron imports keep their runtime meaning; the preload stays in one file. The renderer remains a browser bundle.
+
 ## Storage
 
 The template persists app state under `app.getPath('userData')/moritzbrantner/`:

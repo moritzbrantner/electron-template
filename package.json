@@ -17,7 +17,7 @@
     "format": "biome format --write .",
     "dev": "electron-forge start",
     "build": "bun run build:packages && bun run build:app",
-    "build:app": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts",
+    "build:app": "vite build --config vite.main.config.mts && vite build --config vite.preload.config.mts && vite build --config vite.renderer.config.mts",
     "build:packages": "bun run --filter '@moritzbrantner/*' build",
     "ci": "bun run lint && bun run build && bun run test:unit && bun run test:integration && bun run test:package && bun run test:e2e",
     "test": "bun run test:unit && bun run test:integration && bun run test:e2e",
