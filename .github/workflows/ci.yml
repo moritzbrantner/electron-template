@@ -23,3 +23,14 @@ jobs:
       e2e_command: bun run test:e2e
       install_playwright: true
       install_xvfb: true
+
+  merge-ready:
+    name: merge-ready
+    if: ${{ always() }}
+    needs: ["quality"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: moritzbrantner/reusable-workflows/.github/actions/merge-ready@b0f25f241d76af2584dfc9e375084ff5c5cb97da
+        with:
+          needs: ${{ toJSON(needs) }}
+          required: '["quality"]'
