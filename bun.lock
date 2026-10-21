@@ -10,7 +10,7 @@
         "@moritzbrantner/electron-json-store": "workspace:*",
         "@moritzbrantner/electron-preferences": "workspace:*",
         "@moritzbrantner/electron-window-state": "workspace:*",
-        "@moritzbrantner/maps": "git+https://github.com/moritzbrantner/maps.git#067636c399f03609ccbd4da27971a02ed6a016a0",
+        "@moritzbrantner/maps": "git+https://github.com/moritzbrantner/maps.git#9de05dfdef9030650ca914d97520912ffbf353a1",
         "@moritzbrantner/timeline-editor": "git+https://github.com/moritzbrantner/timeline-editor.git#9adb59c23c44a021cbe37b742f08937884e427e1",
         "@moritzbrantner/ui": "git+https://github.com/moritzbrantner/ui.git#35ea57483456d4b6ecf233c8dae5a6e4eba5c661",
         "electron-squirrel-startup": "^1.0.1",
@@ -357,7 +357,7 @@
 
     "@moritzbrantner/electron-window-state": ["@moritzbrantner/electron-window-state@workspace:packages/electron-window-state"],
 
-    "@moritzbrantner/maps": ["@moritzbrantner/maps@github:moritzbrantner/maps#067636c", { "dependencies": { "@turf/boolean-clockwise": "^7.3.5", "@turf/centroid": "^7.3.5", "@turf/helpers": "^7.3.5", "d3-delaunay": "^6.0.4", "maplibre-gl": "6.4.1", "polygon-clipping": "^0.15.7", "three": "^0.185.0" }, "peerDependencies": { "@moritzbrantner/timeline-editor": "^1.0.0", "@moritzbrantner/ui": "^1.0.0", "react": "^19.0.0", "react-dom": "^19.0.0" }, "optionalPeers": ["@moritzbrantner/timeline-editor"] }, "moritzbrantner-maps-067636c", "sha512-2gjaU7dqCFhWO4+nHXr6WirQS5oPlsXUMaZsGKHJ4Sc+k8Ya3Fn46MAv5bEqqsVrMqDL0lWw5KH+KmKiw3pNXA=="],
+    "@moritzbrantner/maps": ["@moritzbrantner/maps@github:moritzbrantner/maps#9de05df", { "dependencies": { "@turf/boolean-clockwise": "^7.3.5", "@turf/centroid": "^7.3.5", "@turf/helpers": "^7.3.5", "d3-delaunay": "^6.0.4", "maplibre-gl": "6.4.1", "polygon-clipping": "^0.15.7", "three": "^0.185.0" }, "peerDependencies": { "@moritzbrantner/timeline-editor": "^1.0.0", "@moritzbrantner/ui": "^1.0.0", "react": "^19.0.0", "react-dom": "^19.0.0" }, "optionalPeers": ["@moritzbrantner/timeline-editor"] }, "moritzbrantner-maps-9de05df", "sha512-J0rfNCHQuec0Dc1LlHsUU7FpVFl9zxa7MpJvCus39SMQEXr+w1igXDcsCrnJUd2LE9xYhgf3v9fll8zX7zilrw=="],
 
     "@moritzbrantner/timeline-editor": ["@moritzbrantner/timeline-editor@github:moritzbrantner/timeline-editor#9adb59c", { "dependencies": { "@moenarch/editor-core": "^0.4.1", "@moritzbrantner/ui": "git+https://github.com/moritzbrantner/ui.git#9892e374bfd760541b25c4480b5af03e87ee7e9d" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" } }, "moritzbrantner-timeline-editor-9adb59c", "sha512-70gbW3WwdOJBdltTLBw6n2bjRn+O/DA4+Wq7FUrtf4aTueAHxZ22LHya6HTxf2eGr52vGpbkcUiiu+C5Iv1cLg=="],
 
