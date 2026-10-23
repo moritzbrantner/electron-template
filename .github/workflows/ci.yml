@@ -16,7 +16,7 @@ jobs:
       packages: read
     uses: moritzbrantner/reusable-workflows/.github/workflows/validate-repo.yml@b11bce847d35b90e5d6e8f69bacd26c709416781 # scaffold-v2-initial
     with:
-      bun_version: 1.4.3
+      bun_version: latest
       install_command: bash scripts/with-maps-build-tools.sh bun install --frozen-lockfile
       lint_command: bun run lint
       test_command: bun run test:unit && bun run test:integration && bun run test:package
