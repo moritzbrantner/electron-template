@@ -10,9 +10,9 @@
         "@moritzbrantner/electron-json-store": "workspace:*",
         "@moritzbrantner/electron-preferences": "workspace:*",
         "@moritzbrantner/electron-window-state": "workspace:*",
-        "@moritzbrantner/maps": "git+https://github.com/moritzbrantner/maps.git#4834bdc209245302081eafd39705f76974c8cfa8",
-        "@moritzbrantner/timeline-editor": "git+https://github.com/moritzbrantner/timeline-editor.git#80c53cc256c7d8a130c89ca63971c43798f5fb0d",
-        "@moritzbrantner/ui": "git+https://github.com/moritzbrantner/ui.git#d7148b393a8ab3676824fa2f5d2745c28b8ea45f",
+        "@moritzbrantner/maps": "git+https://github.com/moritzbrantner/maps.git#0d57a477116bb49d2c55efe94ea42dfdf5621dc5",
+        "@moritzbrantner/timeline-editor": "git+https://github.com/moritzbrantner/timeline-editor.git#da8feed72997e7ce069be544fa666c1c70761f6c",
+        "@moritzbrantner/ui": "git+https://github.com/moritzbrantner/ui.git#586cfd47090919d415fb0dea07b5404b153dc3aa",
         "electron-squirrel-startup": "^1.0.1",
         "nanoid": "^5.1.6",
         "react": "^19.2.5",
@@ -359,11 +359,11 @@
 
     "@moritzbrantner/electron-window-state": ["@moritzbrantner/electron-window-state@workspace:packages/electron-window-state"],
 
-    "@moritzbrantner/maps": ["@moritzbrantner/maps@github:moritzbrantner/maps#4834bdc", { "dependencies": { "@turf/boolean-clockwise": "^7.3.5", "@turf/centroid": "^7.3.5", "@turf/helpers": "^7.3.5", "d3-delaunay": "^6.0.4", "maplibre-gl": "6.4.1", "polygon-clipping": "^0.15.7", "three": "^0.185.0" }, "peerDependencies": { "@moritzbrantner/timeline-editor": "^1.0.0", "@moritzbrantner/ui": "^1.0.0", "react": "^19.0.0", "react-dom": "^19.0.0" }, "optionalPeers": ["@moritzbrantner/timeline-editor"] }, "moritzbrantner-maps-4834bdc", "sha512-/vpYwmHAlnGIafDKR9FVtel3+opnuZgB8Krim7AJuqtsQ+kBLSMz5PO1VstpL5ppUNazX2oiE0C1yDQlYycycA=="],
+    "@moritzbrantner/maps": ["@moritzbrantner/maps@github:moritzbrantner/maps#0d57a47", { "dependencies": { "@turf/boolean-clockwise": "^7.3.5", "@turf/centroid": "^7.3.5", "@turf/helpers": "^7.3.5", "d3-delaunay": "^6.0.4", "maplibre-gl": "6.4.1", "polygon-clipping": "^0.15.7", "three": "^0.185.0" }, "peerDependencies": { "@moritzbrantner/timeline-editor": "^1.0.0", "@moritzbrantner/ui": "^1.0.0", "react": "^19.0.0", "react-dom": "^19.0.0" }, "optionalPeers": ["@moritzbrantner/timeline-editor"] }, "moritzbrantner-maps-0d57a47", "sha512-C3wMSY/JPOboGya3OCfqlp7Kuwyuu+VwgcdtQlhjiyMNrHBi+OmK2TFE2B5A3+6fh0BtweM9oZ1ojWBOg7nMYQ=="],
 
-    "@moritzbrantner/timeline-editor": ["@moritzbrantner/timeline-editor@github:moritzbrantner/timeline-editor#80c53cc", { "dependencies": { "@moenarch/editor-core": "git+https://github.com/moritzbrantner/editor-core.git#12de038073818cbdd08c23665643e629f721ff26", "@moritzbrantner/ui": "git+https://github.com/moritzbrantner/ui.git#d7148b393a8ab3676824fa2f5d2745c28b8ea45f" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" } }, "moritzbrantner-timeline-editor-80c53cc", "sha512-mmDotX1bwEVngiWGf6zXL6hRqv3cw/C++QzLcg48UjrQ7KNp55IDoBhyod6Ue1gmzlCZUg/wOWO56W8wjnPcnQ=="],
+    "@moritzbrantner/timeline-editor": ["@moritzbrantner/timeline-editor@github:moritzbrantner/timeline-editor#da8feed", { "dependencies": { "@moenarch/editor-core": "git+https://github.com/moritzbrantner/editor-core.git#12de038073818cbdd08c23665643e629f721ff26", "@moritzbrantner/ui": "git+https://github.com/moritzbrantner/ui.git#d7148b393a8ab3676824fa2f5d2745c28b8ea45f" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" } }, "moritzbrantner-timeline-editor-da8feed", "sha512-hyUbSu1fAKNcUOUCQg1OeThF/GG8LYRX5aNfKHQkTYcfanyM4IYm95bSED8xDBZomKHZj8IOFaxswGYwGN1VvQ=="],
 
-    "@moritzbrantner/ui": ["@moritzbrantner/ui@github:moritzbrantner/ui#d7148b3", { "dependencies": { "@base-ui/react": "^1.3.0", "@dnd-kit/react": "^0.5.0", "@tanstack/react-table": "^8.21.3", "class-variance-authority": "^0.7.1", "clsx": "^2.1.1", "cmdk": "^1.1.1", "date-fns": "^4.1.0", "embla-carousel-react": "^8.6.0", "input-otp": "^1.4.2", "lucide-react": "^1.7.0", "motion": "^13.1.1", "radix-ui": "^1.4.3", "react-day-picker": "^9.14.0", "react-resizable-panels": "^4.9.0", "sonner": "^2.0.7", "tailwind-merge": "^3.4.0", "tailwindcss": "^4.1.14", "tw-animate-css": "^1.4.0", "vaul": "^1.1.2" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" } }, "moritzbrantner-ui-d7148b3", "sha512-rzD/7f1nr+RByzDykjuDDPhydJ0mgOvPqeq7BQc1PZywOw7+2ADsjjfYJ6+S55Ywr0JUEyeHdRI2chStBuIwYA=="],
+    "@moritzbrantner/ui": ["@moritzbrantner/ui@github:moritzbrantner/ui#586cfd4", { "dependencies": { "@base-ui/react": "^1.3.0", "@dnd-kit/react": "^0.5.0", "@tanstack/react-table": "^8.21.3", "class-variance-authority": "^0.7.1", "clsx": "^2.1.1", "cmdk": "^1.1.1", "date-fns": "^4.1.0", "embla-carousel-react": "^8.6.0", "input-otp": "^1.4.2", "lucide-react": "^1.7.0", "motion": "^13.1.1", "radix-ui": "^1.4.3", "react-day-picker": "^9.14.0", "react-resizable-panels": "^4.9.0", "sonner": "^2.0.7", "tailwind-merge": "^3.4.0", "tailwindcss": "^4.1.14", "tw-animate-css": "^1.4.0", "vaul": "^1.1.2" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" } }, "moritzbrantner-ui-586cfd4", "sha512-VlWKBg8hjtAonFYzWOFBrIMF0hnaQXliffD6YhhcDPjxqIzSpkzYY/1b7CrAzFwOlUO72nUvJseGJCgq3CwPeQ=="],
 
     "@nodelib/fs.scandir": ["@nodelib/fs.scandir@2.1.5", "", { "dependencies": { "@nodelib/fs.stat": "2.0.5", "run-parallel": "^1.1.9" } }, "sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g=="],
 
@@ -1604,6 +1604,8 @@
     "@inquirer/search/@inquirer/type": ["@inquirer/type@2.0.0", "", { "dependencies": { "mute-stream": "^1.0.0" } }, "sha512-XvJRx+2KR3YXyYtPUUy+qd9i7p+GO9Ko6VIIpWlBrpWwXDv8WLFeHTxz35CfQFUiBMLXlGHhGzys7lqit9gWag=="],
 
     "@inquirer/select/@inquirer/type": ["@inquirer/type@2.0.0", "", { "dependencies": { "mute-stream": "^1.0.0" } }, "sha512-XvJRx+2KR3YXyYtPUUy+qd9i7p+GO9Ko6VIIpWlBrpWwXDv8WLFeHTxz35CfQFUiBMLXlGHhGzys7lqit9gWag=="],
+
+    "@moritzbrantner/timeline-editor/@moritzbrantner/ui": ["@moritzbrantner/ui@github:moritzbrantner/ui#d7148b3", { "dependencies": { "@base-ui/react": "^1.3.0", "@dnd-kit/react": "^0.5.0", "@tanstack/react-table": "^8.21.3", "class-variance-authority": "^0.7.1", "clsx": "^2.1.1", "cmdk": "^1.1.1", "date-fns": "^4.1.0", "embla-carousel-react": "^8.6.0", "input-otp": "^1.4.2", "lucide-react": "^1.7.0", "motion": "^13.1.1", "radix-ui": "^1.4.3", "react-day-picker": "^9.14.0", "react-resizable-panels": "^4.9.0", "sonner": "^2.0.7", "tailwind-merge": "^3.4.0", "tailwindcss": "^4.1.14", "tw-animate-css": "^1.4.0", "vaul": "^1.1.2" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" } }, "moritzbrantner-ui-d7148b3", "sha512-rzD/7f1nr+RByzDykjuDDPhydJ0mgOvPqeq7BQc1PZywOw7+2ADsjjfYJ6+S55Ywr0JUEyeHdRI2chStBuIwYA=="],
 
     "@npmcli/move-file/mkdirp": ["mkdirp@1.0.4", "", { "bin": { "mkdirp": "bin/cmd.js" } }, "sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw=="],
 
