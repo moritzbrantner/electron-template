@@ -10,9 +10,9 @@
         "@moritzbrantner/electron-json-store": "workspace:*",
         "@moritzbrantner/electron-preferences": "workspace:*",
         "@moritzbrantner/electron-window-state": "workspace:*",
-        "@moritzbrantner/maps": "git+https://github.com/moritzbrantner/maps.git#d25947d6c2d39a4f7f625e94828d027eab7ed140",
-        "@moritzbrantner/timeline-editor": "git+https://github.com/moritzbrantner/timeline-editor.git#4b01d79e05bb46d0cf1c9249dd4ce98776bb33ad",
-        "@moritzbrantner/ui": "git+https://github.com/moritzbrantner/ui.git#2d116d65244b5e8835ed0d7688de861cbea653bb",
+        "@moritzbrantner/maps": "git+https://github.com/moritzbrantner/maps.git#ef5df39238c57ffa6535fb7063ae53f27d638b7b",
+        "@moritzbrantner/timeline-editor": "git+https://github.com/moritzbrantner/timeline-editor.git#0f12442019ba4f9404b5993c9f71eab76f269f50",
+        "@moritzbrantner/ui": "git+https://github.com/moritzbrantner/ui.git#0f7cbac8086bacb971c2f3c398c523c7de28c3e1",
         "electron-squirrel-startup": "^1.0.1",
         "nanoid": "^5.1.6",
         "react": "^19.2.5",
@@ -355,7 +355,7 @@
 
     "@maplibre/vt-pbf": ["@maplibre/vt-pbf@4.3.3", "", { "dependencies": { "@mapbox/point-geometry": "^1.1.0", "@types/geojson": "^7946.0.16", "pbf": "^5.1.2" } }, "sha512-dEe5XUd64RQbxNxy2OzIkJnwNDWjVmSXjCd0A7zLirm7QJ/WWbmtDFIkfsiM4yt1cplqzG6oSivRYeWx1SM1yg=="],
 
-    "@moenarch/editor-core": ["@moenarch/editor-core@github:moritzbrantner/editor-core#e238e17", { "peerDependencies": { "react": "^19.0.0" }, "optionalPeers": ["react"], "hasInstallScript": true }, "moritzbrantner-editor-core-e238e17", "sha512-v3HtIpA14cce/a7nmBqjVBJBWiCsdQURU2mVimH30pk6OyydYq4FVy9gNQ6utiYsygcvoF3ip6OXfUR07Iah4g=="],
+    "@moenarch/editor-core": ["@moenarch/editor-core@github:moritzbrantner/editor-core#05ae0d0", { "peerDependencies": { "react": "^19.0.0" }, "optionalPeers": ["react"], "hasInstallScript": true }, "moritzbrantner-editor-core-05ae0d0", "sha512-gxZiKelPMLykKPY8Ocs47YdALI9Y78S/FI+C0ewuF5yNTSXGg9nepsmiqJtnQe+Q6Ur4J6kfIfUjL8FwxFw/zA=="],
 
     "@moritzbrantner/biome-config-react": ["@moritzbrantner/biome-config-react@workspace:packages/biome-config-react"],
 
@@ -369,11 +369,11 @@
 
     "@moritzbrantner/electron-window-state": ["@moritzbrantner/electron-window-state@workspace:packages/electron-window-state"],
 
-    "@moritzbrantner/maps": ["@moritzbrantner/maps@github:moritzbrantner/maps#d25947d", { "dependencies": { "@mapbox/unitbezier": "^1.0.0", "@turf/boolean-clockwise": "^7.3.5", "@turf/centroid": "^7.3.5", "@turf/helpers": "^7.3.5", "d3-delaunay": "^6.0.4", "maplibre-gl": "6.15.0", "polygon-clipping": "^0.15.7" }, "peerDependencies": { "@moritzbrantner/timeline-editor": "^1.0.0", "@moritzbrantner/ui": "^1.0.0", "react": "^19.0.0", "react-dom": "^19.0.0" }, "optionalPeers": ["@moritzbrantner/timeline-editor"], "hasInstallScript": true }, "moritzbrantner-maps-d25947d", "sha512-uHyyPagx2G1r/P6Hg0/KcmitPW8aTvGg0b4CCpJMMNn+29NeZKKr5IcsjxDYeSLdaAmOuwULQ45bdrl0dJwG2Q=="],
+    "@moritzbrantner/maps": ["@moritzbrantner/maps@github:moritzbrantner/maps#ef5df39", { "dependencies": { "@mapbox/unitbezier": "^1.0.0", "@turf/boolean-clockwise": "^7.3.5", "@turf/centroid": "^7.3.5", "@turf/helpers": "^7.3.5", "d3-delaunay": "^6.0.4", "maplibre-gl": "6.15.0", "pmtiles": "4.5.0", "polygon-clipping": "^0.15.7" }, "peerDependencies": { "@moritzbrantner/timeline-editor": "^1.0.0", "@moritzbrantner/ui": "^1.0.0", "react": "^19.0.0", "react-dom": "^19.0.0" }, "optionalPeers": ["@moritzbrantner/timeline-editor"], "hasInstallScript": true }, "moritzbrantner-maps-ef5df39", "sha512-ZNC8FlJ1qrWGwMHrFIvmTYM6oNVZ4lSLt+PHYd4dOH6DfRVbYNKfYip0LV8WPTz4j4vStLIXvOgYXv3rAC2gvw=="],
 
-    "@moritzbrantner/timeline-editor": ["@moritzbrantner/timeline-editor@github:moritzbrantner/timeline-editor#4b01d79", { "dependencies": { "@moenarch/editor-core": "git+https://github.com/moritzbrantner/editor-core.git#e238e171c27e7dafb7db085430a19ebf67f8fb1b", "@moritzbrantner/ui": "git+https://github.com/moritzbrantner/ui.git#2d116d65244b5e8835ed0d7688de861cbea653bb" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" }, "hasInstallScript": true }, "moritzbrantner-timeline-editor-4b01d79", "sha512-qlx3nnpZGiS/avzS9wUIPBMUB60KfPf+V9jMThtXq7pS4lVctUR7Te++7g5FyN10HhWSN8q8wn61euU7UUoAVQ=="],
+    "@moritzbrantner/timeline-editor": ["@moritzbrantner/timeline-editor@github:moritzbrantner/timeline-editor#0f12442", { "dependencies": { "@moenarch/editor-core": "git+https://github.com/moritzbrantner/editor-core.git#05ae0d0ef9f782ff70d65e8db0675e6aa2dd6870", "@moritzbrantner/ui": "git+https://github.com/moritzbrantner/ui.git#6dd3fc9942a14fe43550768cb793472c76555956" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" }, "hasInstallScript": true }, "moritzbrantner-timeline-editor-0f12442", "sha512-1l1IQJ5PT77+9bTr2Z+Egp+l2INSHKCUOdUDXgZj7kd4GOOfShcQh8pSzKdF9Vy978hsTD/PdjYCUYRP8xYaFQ=="],
 
-    "@moritzbrantner/ui": ["@moritzbrantner/ui@github:moritzbrantner/ui#2d116d6", { "dependencies": { "@base-ui/react": "^1.3.0", "@dnd-kit/react": "^0.5.0", "@tanstack/react-table": "^8.21.3", "class-variance-authority": "^0.7.1", "clsx": "^2.1.1", "cmdk": "^1.1.1", "date-fns": "^4.1.0", "embla-carousel-react": "^8.6.0", "input-otp": "^1.4.2", "lucide-react": "^1.7.0", "motion": "^13.1.1", "radix-ui": "^1.4.3", "react-day-picker": "^9.14.0", "react-resizable-panels": "^4.9.0", "sonner": "^2.0.7", "tailwind-merge": "^3.4.0", "tailwindcss": "^4.1.14", "tw-animate-css": "^1.4.0", "vaul": "^1.1.2" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" }, "hasInstallScript": true }, "moritzbrantner-ui-2d116d6", "sha512-/qtoIrQyw4s6cCDB2GktbWTWj0PR33wxl+nSqsCSEHlJeFDeonusXVB9mm7etYrYfwerPasYBlUFiGCNdA4f1w=="],
+    "@moritzbrantner/ui": ["@moritzbrantner/ui@github:moritzbrantner/ui#0f7cbac", { "dependencies": { "@base-ui/react": "^1.3.0", "@dnd-kit/react": "^0.5.0", "@tanstack/react-table": "^8.21.3", "class-variance-authority": "^0.7.1", "clsx": "^2.1.1", "cmdk": "^1.1.1", "date-fns": "^4.1.0", "embla-carousel-react": "^8.6.0", "input-otp": "^1.4.2", "lucide-react": "^1.7.0", "motion": "^13.1.1", "radix-ui": "^1.4.3", "react-day-picker": "^9.14.0", "react-resizable-panels": "^4.9.0", "sonner": "^2.0.7", "tailwind-merge": "^3.4.0", "tailwindcss": "^4.1.14", "tw-animate-css": "^1.4.0", "vaul": "^1.1.2" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" }, "hasInstallScript": true }, "moritzbrantner-ui-0f7cbac", "sha512-cXEKk9UTmE25uKmx+6N7pt+fndaAtcG6DDy6aci09FScOkdKwEvgrE4oUKoZsKr2G4Xt1rEipe1ze17aEIZRww=="],
 
     "@napi-rs/lzma-linux-x64-gnu": ["@napi-rs/lzma-linux-x64-gnu@1.5.1", "", { "os": "linux", "cpu": "x64", "libc": "glibc" }, "sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ=="],
 
@@ -929,6 +929,8 @@
 
     "fdir": ["fdir@6.5.0", "", { "peerDependencies": { "picomatch": "^3 || ^4" }, "optionalPeers": ["picomatch"] }, "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg=="],
 
+    "fflate": ["fflate@0.8.3", "", {}, "sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA=="],
+
     "file-entry-cache": ["file-entry-cache@11.1.5", "", { "dependencies": { "flat-cache": "^6.1.23" } }, "sha512-+PFTHITI08JIGhnNpGNI8T8inUpgZfk3GNEqfT9R2zZV2iFXg3CvqzSl/uEhs7TSGujYRELEANyDvS8Fj7+S7Q=="],
 
     "filename-reserved-regex": ["filename-reserved-regex@2.0.0", "", {}, "sha512-lc1bnsSr4L4Bdif8Xb/qrtokGbq5zlsms/CYH8PP+WtCkGNF65DPiQY8vG3SakEdRn8Dlnm+gW/qWKKjS5sZzQ=="],
@@ -1266,6 +1268,8 @@
     "playwright-core": ["playwright-core@1.64.1", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-BC4s8y6SEVA6Q1rSxZTto8hI1KUI3xXlHGZgvGqP4IqPdI/a6FX9H29IDNz7vKo9l21b6LfYosScPL6M3xxyDQ=="],
 
     "plist": ["plist@3.1.1", "", { "dependencies": { "@xmldom/xmldom": "^0.9.10", "base64-js": "^1.5.1", "xmlbuilder": "^15.1.1" } }, "sha512-ZIfcLJC+7E7FBFnDxm9MPmt7D+DidyQ26lewieO75AdhA2ayMtsJSES0iWzqJQbcVRSrTufQoy0DR94xHue0oA=="],
+
+    "pmtiles": ["pmtiles@4.5.0", "", { "dependencies": { "fflate": "^0.8.2" } }, "sha512-CBeD4SoUluFziGdy/8k7FOjQxQy486n+929W/tWophauvMICpkZ26vGBWhDt/6b1FZQWNaf4jFdT/5+q0Wii5w=="],
 
     "polygon-clipping": ["polygon-clipping@0.15.7", "", { "dependencies": { "robust-predicates": "^3.0.2", "splaytree": "^3.1.0" } }, "sha512-nhfdr83ECBg6xtqOAJab1tbksbBAOMUltN60bU+llHVOL0e5Onm1WpAXXWXVB39L8AJFssoIhEVuy/S90MmotA=="],
 
@@ -1618,6 +1622,8 @@
     "@inquirer/search/@inquirer/type": ["@inquirer/type@2.0.0", "", { "dependencies": { "mute-stream": "^1.0.0" } }, "sha512-XvJRx+2KR3YXyYtPUUy+qd9i7p+GO9Ko6VIIpWlBrpWwXDv8WLFeHTxz35CfQFUiBMLXlGHhGzys7lqit9gWag=="],
 
     "@inquirer/select/@inquirer/type": ["@inquirer/type@2.0.0", "", { "dependencies": { "mute-stream": "^1.0.0" } }, "sha512-XvJRx+2KR3YXyYtPUUy+qd9i7p+GO9Ko6VIIpWlBrpWwXDv8WLFeHTxz35CfQFUiBMLXlGHhGzys7lqit9gWag=="],
+
+    "@moritzbrantner/timeline-editor/@moritzbrantner/ui": ["@moritzbrantner/ui@github:moritzbrantner/ui#6dd3fc9", { "dependencies": { "@base-ui/react": "^1.3.0", "@dnd-kit/react": "^0.5.0", "@tanstack/react-table": "^8.21.3", "class-variance-authority": "^0.7.1", "clsx": "^2.1.1", "cmdk": "^1.1.1", "date-fns": "^4.1.0", "embla-carousel-react": "^8.6.0", "input-otp": "^1.4.2", "lucide-react": "^1.7.0", "motion": "^13.1.1", "radix-ui": "^1.4.3", "react-day-picker": "^9.14.0", "react-resizable-panels": "^4.9.0", "sonner": "^2.0.7", "tailwind-merge": "^3.4.0", "tailwindcss": "^4.1.14", "tw-animate-css": "^1.4.0", "vaul": "^1.1.2" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" }, "hasInstallScript": true }, "moritzbrantner-ui-6dd3fc9", "sha512-wQs4k13Y8M5xJ4MkJDUQOh8bXN0KJng5dMfRwlPU8W8Gbqxtm3gVu0raNmwMsXVFs83LVIQT6/yoWVZGa1yF5Q=="],
 
     "@npmcli/move-file/mkdirp": ["mkdirp@1.0.4", "", { "bin": { "mkdirp": "bin/cmd.js" } }, "sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw=="],
 
