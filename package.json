@@ -65,7 +65,7 @@
     "@moritzbrantner/electron-preferences": "workspace:*",
     "@moritzbrantner/electron-window-state": "workspace:*",
     "@moritzbrantner/maps": "git+https://github.com/moritzbrantner/maps.git#6ea8a3bd6fa84e821d11dd3f15a4ad93412ad828",
-    "@moritzbrantner/timeline-editor": "git+https://github.com/moritzbrantner/timeline-editor.git#078f878862d6a6a61b88ef14ba0a0effb08fa97c",
+    "@moritzbrantner/timeline-editor": "git+https://github.com/moritzbrantner/timeline-editor.git#3b50c0877611a3bc4bb859f30702f1321050e391",
     "@moritzbrantner/ui": "git+https://github.com/moritzbrantner/ui.git#6c929db1222fc3f72923d59cf96177f8b2fe1691",
     "electron-squirrel-startup": "^1.0.1",
     "nanoid": "^5.1.6",
