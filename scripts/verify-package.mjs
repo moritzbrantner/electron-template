@@ -6,7 +6,24 @@ const rootDir = process.cwd();
 const outDir = path.join(rootDir, 'out');
 const packageJson = JSON.parse(readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
 const productName = packageJson.productName ?? packageJson.name;
-const packageManagerName = String(packageJson.packageManager ?? 'npm').split('@', 1)[0];
+const packageManagerName = detectPackageManager();
+
+function detectPackageManager() {
+  if (packageJson.packageManager) {
+    return String(packageJson.packageManager).split('@', 1)[0];
+  }
+  const lockfiles = [
+    ['bun', ['bun.lock', 'bun.lockb']],
+    ['pnpm', ['pnpm-lock.yaml']],
+    ['yarn', ['yarn.lock']],
+  ];
+  for (const [name, files] of lockfiles) {
+    if (files.some((file) => existsSync(path.join(rootDir, file)))) {
+      return name;
+    }
+  }
+  return 'npm';
+}
 
 function getPackageManagerCommand() {
   switch (packageManagerName) {
