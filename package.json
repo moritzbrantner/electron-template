@@ -6,7 +6,7 @@
   "main": ".vite/build/main.js",
   "private": true,
   "engines": {
-    "bun": "1.4.x"
+    "bun": ">=1.4.0"
   },
   "scripts": {
     "start": "electron-forge start",
@@ -72,7 +72,6 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },
-  "packageManager": "bun@1.4.5",
   "workspaces": [
     "packages/*"
   ],
